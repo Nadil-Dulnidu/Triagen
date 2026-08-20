@@ -44,7 +44,7 @@ dependencies = [
     "python-multipart>=0.0.20",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "pytest>=8.3.0",
     "pytest-asyncio>=1.0.0",
@@ -52,6 +52,7 @@ dev = [
     "ruff>=0.11.0",
     "mypy>=1.15.0",
 ]
+
 
 [project.scripts]
 server = "server:main"

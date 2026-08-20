@@ -15,7 +15,8 @@ install: install-server install-client ## Install all dependencies (server + cli
 
 install-server: ## Install Python backend dependencies using uv
 	@echo "Installing backend dependencies..."
-	cd server && uv sync --extra dev
+	cd server && uv sync --dev
+
 
 install-client: ## Install Next.js frontend dependencies using npm
 	@echo "Installing frontend dependencies..."
