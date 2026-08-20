@@ -1,0 +1,105 @@
+services:
+  # ── PostgreSQL 16 ──────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: pullsense-db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: pullsense
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis 7 ────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: pullsense-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── FastAPI Backend ────────────────────────────────────────────────
+  api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: pullsense-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: development
+      APP_DEBUG: "true"
+      APP_LOG_LEVEL: DEBUG
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/pullsense
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+    env_file:
+      - ./server/.env
+    volumes:
+      - ./server/src:/app/src
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── Celery Worker ──────────────────────────────────────────────────
+  worker:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.worker
+    container_name: pullsense-worker
+    restart: unless-stopped
+    environment:
+      APP_ENV: development
+      APP_LOG_LEVEL: DEBUG
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/pullsense
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+    env_file:
+      - ./server/.env
+    volumes:
+      - ./server/src:/app/src
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── Next.js Frontend ───────────────────────────────────────────────
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      target: development
+    container_name: pullsense-client
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    env_file:
+      - ./client/.env.local
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+      - /app/.next
+
+volumes:
+  postgres_data:
