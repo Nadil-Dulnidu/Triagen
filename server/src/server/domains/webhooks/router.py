@@ -14,6 +14,7 @@ from server.domains.auth.repository import (
     OrganizationRepository,
     UserRepository,
 )
+from server.domains.webhooks.github import verify_github_signature
 from server.domains.webhooks.models import WebhookEvent
 from server.infrastructure import get_logger
 from server.infrastructure.database import get_db_session
@@ -21,6 +22,74 @@ from server.infrastructure.database import get_db_session
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/webhooks", tags=["Webhooks"])
+
+
+@router.post("/github", status_code=status.HTTP_202_ACCEPTED)
+async def handle_github_webhook(
+    request: Request,
+    db: AsyncSession = Depends(get_db_session),
+    settings: Settings = Depends(get_settings),
+) -> dict[str, str]:
+    """Handle incoming GitHub App webhooks.
+
+    Validates HMAC signature, records the event for audit & replay,
+    and enqueues background processing for PR events.
+    """
+    raw_body = await verify_github_signature(request, settings)
+
+    event_type = request.headers.get("X-GitHub-Event", "unknown")
+    delivery_id = request.headers.get("X-GitHub-Delivery", "unknown")
+
+    try:
+        payload = json.loads(raw_body.decode("utf-8"))
+    except json.JSONDecodeError as err:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid JSON payload",
+        ) from err
+
+    action = payload.get("action")
+
+    # Store raw webhook event for idempotency and audit log
+    webhook_event = WebhookEvent(
+        source="github",
+        event_type=event_type,
+        action=action,
+        delivery_id=f"gh_{delivery_id}",
+        headers=dict(request.headers),
+        payload=payload,
+        processing_status="pending",
+    )
+    db.add(webhook_event)
+    await db.flush()
+
+    logger.info(
+        "github_webhook_received",
+        event_type=event_type,
+        action=action,
+        delivery_id=delivery_id,
+        event_id=webhook_event.id,
+    )
+
+    # Enqueue background task based on event type
+    if event_type == "pull_request" and action in {"opened", "synchronize", "reopened"}:
+        try:
+            from server.workers.review_tasks import process_github_pr_review
+
+            process_github_pr_review.delay(webhook_event.id)
+            logger.info("enqueued_pr_review_task", event_id=webhook_event.id)
+        except Exception as e:
+            logger.warning("celery_enqueue_failed", error=str(e))
+            # Even if Celery is offline during local test, webhook is saved in DB
+    elif event_type in {"installation", "installation_repositories"}:
+        try:
+            from server.workers.sync_tasks import sync_github_installation
+
+            sync_github_installation.delay(webhook_event.id)
+        except Exception as e:
+            logger.warning("celery_enqueue_failed", error=str(e))
+
+    return {"status": "accepted", "event_id": str(webhook_event.id)}
 
 
 async def _verify_clerk_webhook(

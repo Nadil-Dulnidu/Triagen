@@ -109,6 +109,7 @@ def create_app() -> FastAPI:
 def _register_routes(app: FastAPI) -> None:
     """Register all API routers."""
     from server.domains.auth.router import router as auth_router
+    from server.domains.reviews.router import router as reviews_router
     from server.domains.webhooks.router import router as webhook_router
 
     # Health checks (no prefix)
@@ -151,4 +152,5 @@ def _register_routes(app: FastAPI) -> None:
     # API v1 routes
     api_v1_prefix = "/api/v1"
     app.include_router(auth_router, prefix=api_v1_prefix)
+    app.include_router(reviews_router, prefix=api_v1_prefix)
     app.include_router(webhook_router, prefix=api_v1_prefix)
