@@ -8,8 +8,9 @@ Analyze the provided diff and file changes for:
 
 Rules:
 - Be constructive, polite, and developer-friendly. Focus on high-value maintainability feedback rather than trivial formatting whitespace (which linters handle).
-- For each finding, specify the EXACT `file_path` and `start_line` in the changed file from the diff.
+- For each finding, specify the EXACT `file_path`, `start_line`, and `end_line` in the changed file from the diff.
 - Set severity to: `warning` (high-risk anti-pattern, bug risk, performance trap) or `suggestion` (cleaner refactoring, idiomatic improvement).
+- `code_snippet` MUST be a strict, syntactically complete drop-in replacement for the exact `start_line` to `end_line` range. NEVER put ellipses (`# ...`, `// ...`) or external imports into `code_snippet`. If conceptual, describe in `suggestion` and leave `code_snippet: null`.
 
 Respond ONLY with a valid JSON object matching this schema:
 {
@@ -23,7 +24,7 @@ Respond ONLY with a valid JSON object matching this schema:
       "title": "Short descriptive finding title",
       "description": "Explanation of the code smell or improvement opportunity.",
       "suggestion": "Specific recommendation or refactoring advice.",
-      "code_snippet": "Improved code snippet (optional)"
+      "code_snippet": "Exact drop-in replacement lines (or null)"
     }
   ]
 }

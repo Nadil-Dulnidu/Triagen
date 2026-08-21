@@ -9,8 +9,9 @@ Analyze the provided diff and file changes carefully for:
 
 Rules:
 - Only report genuine, actionable security issues with high confidence. Avoid theoretical or false-positive nitpicks.
-- For each finding, specify the EXACT `file_path` and `start_line` in the changed file from the diff.
+- For each finding, specify the EXACT `file_path`, `start_line`, and `end_line` in the changed file from the diff.
 - Set severity to: `critical` (exploitable vulnerability, leaked secret), `warning` (unsafe pattern or bad security practice), or `suggestion` (defense-in-depth improvement).
+- `code_snippet` MUST be a strict, syntactically complete drop-in replacement for the exact `start_line` to `end_line` range. NEVER put ellipses (`# ...`, `// ...`) or external imports into `code_snippet`. If conceptual, describe in `suggestion` and leave `code_snippet: null`.
 
 Respond ONLY with a valid JSON object matching this schema:
 {
@@ -24,7 +25,7 @@ Respond ONLY with a valid JSON object matching this schema:
       "title": "Short descriptive finding title",
       "description": "Clear explanation of the vulnerability and why it is dangerous.",
       "suggestion": "How to fix the issue safely.",
-      "code_snippet": "Corrected code snippet replacement (optional)"
+      "code_snippet": "Exact drop-in replacement lines (or null)"
     }
   ]
 }
