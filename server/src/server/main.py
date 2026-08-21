@@ -108,8 +108,15 @@ def create_app() -> FastAPI:
 
 def _register_routes(app: FastAPI) -> None:
     """Register all API routers."""
+    from server.domains.analytics.router import router as analytics_router
     from server.domains.auth.router import router as auth_router
     from server.domains.memory.router import router as memory_router
+    from server.domains.repositories.router import (
+        github_router,
+    )
+    from server.domains.repositories.router import (
+        router as repositories_router,
+    )
     from server.domains.reviews.router import router as reviews_router
     from server.domains.webhooks.router import router as webhook_router
 
@@ -153,6 +160,9 @@ def _register_routes(app: FastAPI) -> None:
     # API v1 routes
     api_v1_prefix = "/api/v1"
     app.include_router(auth_router, prefix=api_v1_prefix)
+    app.include_router(analytics_router, prefix=api_v1_prefix)
+    app.include_router(github_router, prefix=api_v1_prefix)
     app.include_router(memory_router, prefix=api_v1_prefix)
+    app.include_router(repositories_router, prefix=api_v1_prefix)
     app.include_router(reviews_router, prefix=api_v1_prefix)
     app.include_router(webhook_router, prefix=api_v1_prefix)
