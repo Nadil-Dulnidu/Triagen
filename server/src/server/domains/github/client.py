@@ -127,7 +127,7 @@ class GitHubClient:
 
     async def list_installation_repositories(self) -> list[dict[str, Any]]:
         """List repositories accessible to this installation."""
-        async with httpx.AsyncClient(base_url=self.BASE_URL) as client:
+        async with httpx.AsyncClient(base_url=GITHUB_API_BASE) as client:
             headers = await self._get_headers()
             response = await client.get("/installation/repositories", headers=headers)
             response.raise_for_status()

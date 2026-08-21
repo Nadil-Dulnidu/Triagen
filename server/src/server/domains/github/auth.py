@@ -92,3 +92,31 @@ async def get_installation_token(
 
         logger.info("github_installation_token_acquired", installation_id=installation_id)
         return token
+
+
+async def get_app_installations(settings: Settings | None = None) -> list[dict[str, Any]]:
+    """List all installations of this GitHub App using the App JWT."""
+    settings = settings or get_settings()
+    if not settings.github_app_id or not settings.github_app_private_key:
+        return []
+
+    try:
+        app_jwt = generate_app_jwt(settings)
+        headers = {
+            "Authorization": f"Bearer {app_jwt}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+        url = "https://api.github.com/app/installations"
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            response = await client.get(url, headers=headers)
+            if response.is_success:
+                return response.json()
+            logger.warning(
+                "github_list_installations_failed",
+                status_code=response.status_code,
+                response=response.text,
+            )
+    except Exception as e:
+        logger.warning("github_get_app_installations_error", error=str(e))
+    return []

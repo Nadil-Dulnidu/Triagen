@@ -5,6 +5,10 @@ from __future__ import annotations
 from celery import Celery
 
 from server.config import get_settings
+from server.infrastructure.database import import_all_models
+
+# Ensure all SQLAlchemy models are registered before Celery tasks execute
+import_all_models()
 
 settings = get_settings()
 
@@ -15,6 +19,12 @@ celery_app = Celery(
 )
 
 celery_app.conf.update(
+    # Explicit worker modules inclusion
+    include=[
+        "server.workers.review_tasks",
+        "server.workers.sync_tasks",
+        "server.workers.indexing_tasks",
+    ],
     # Serialization
     task_serializer="json",
     accept_content=["json"],
@@ -31,7 +41,6 @@ celery_app.conf.update(
     task_routes={
         "server.workers.review_tasks.*": {"queue": "reviews"},
         "server.workers.sync_tasks.*": {"queue": "sync"},
-        "server.workers.cleanup_tasks.*": {"queue": "cleanup"},
     },
     # Default queue
     task_default_queue="default",
@@ -39,6 +48,3 @@ celery_app.conf.update(
     task_default_retry_delay=30,
     task_max_retries=3,
 )
-
-# Auto-discover tasks in the workers package
-celery_app.autodiscover_tasks(["server.workers"])

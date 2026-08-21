@@ -33,7 +33,7 @@ dev-server: ## Run FastAPI backend server locally with hot-reload
 	cd server && uv run uvicorn server.main:create_app --factory --reload --port 8000
 
 dev-worker: ## Run Celery background worker locally
-	cd server && uv run celery -A server.infrastructure.celery_app:celery_app worker --loglevel=info --concurrency=2
+	cd server && uv run celery -A server.infrastructure.celery_app:celery_app worker --loglevel=info --pool=solo -Q default,reviews,sync
 
 dev-client: ## Run Next.js frontend dev server locally
 	cd client && npm run dev

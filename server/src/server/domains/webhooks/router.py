@@ -61,7 +61,8 @@ async def handle_github_webhook(
         processing_status="pending",
     )
     db.add(webhook_event)
-    await db.flush()
+    await db.commit()
+    await db.refresh(webhook_event)
 
     logger.info(
         "github_webhook_received",

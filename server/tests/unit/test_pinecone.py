@@ -13,6 +13,7 @@ from server.infrastructure.pinecone import PineconeVectorStore
 async def test_pinecone_vector_store_fallback() -> None:
     """Test vector store gracefully handles missing API key or unconfigured index."""
     store = PineconeVectorStore()
+    store.get_index = MagicMock(return_value=None)  # type: ignore[method-assign]
 
     # When no index is available
     count = await store.upsert_vectors([], namespace="test/repo")

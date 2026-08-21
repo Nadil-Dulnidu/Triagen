@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -25,7 +25,7 @@ class Repository(Base):
         ForeignKey("organizations.id", ondelete="CASCADE"),
         index=True,
     )
-    github_repo_id: Mapped[int] = mapped_column(Integer, unique=True, index=True)
+    github_repo_id: Mapped[int] = mapped_column(BigInteger, unique=True, index=True)
     full_name: Mapped[str] = mapped_column(String(255), index=True)  # owner/repo
     name: Mapped[str] = mapped_column(String(255))
     default_branch: Mapped[str] = mapped_column(String(255), default="main")
@@ -42,7 +42,10 @@ class Repository(Base):
         back_populates="repositories"
     )
     config: Mapped[RepoConfig | None] = relationship(
-        back_populates="repository", uselist=False, cascade="all, delete-orphan"
+        back_populates="repository",
+        uselist=False,
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )
     members: Mapped[list[RepoMember]] = relationship(
         back_populates="repository", cascade="all, delete-orphan"

@@ -27,12 +27,7 @@ logger = get_logger(__name__)
 
 def _run_async(coro: Any) -> Any:
     """Helper to run async coroutines synchronously within a Celery task."""
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        return loop.run_until_complete(coro)
-    finally:
-        loop.close()
+    return asyncio.run(coro)
 
 
 @celery_app.task(
@@ -90,12 +85,38 @@ async def _execute_pr_review(webhook_event_id: str) -> dict[str, Any]:
         review_repo = ReviewRepository(session)
 
         # 2. Upsert Repository & PullRequest
-        # Default org fallback if not yet mapped
-        org_id = webhook_event.organization_id or "00000000-0000-0000-0000-000000000000"
-
-        # Check existing repo
         repo_entity = await repo_repo.get_by_github_id(repo_github_id)
         if repo_entity is None:
+            from server.domains.auth.models import Organization
+
+            org = None
+            if installation_id:
+                stmt_org = select(Organization).where(
+                    Organization.github_installation_id == str(installation_id)
+                )
+                res = await session.execute(stmt_org)
+                org = res.scalar_one_or_none()
+
+            if not org and webhook_event.organization_id:
+                org = await session.get(Organization, webhook_event.organization_id)
+
+            if not org:
+                res = await session.execute(select(Organization).limit(1))
+                org = res.scalar_one_or_none()
+
+            if not org:
+                org = Organization(
+                    clerk_org_id=f"org_inst_{installation_id or 'default'}",
+                    name="Default Organization",
+                    github_installation_id=str(installation_id) if installation_id else None,
+                )
+                session.add(org)
+                await session.flush()
+            elif installation_id and not org.github_installation_id:
+                org.github_installation_id = str(installation_id)
+                await session.flush()
+
+            org_id = org.id
             repo_entity = await repo_repo.create_or_update(
                 organization_id=org_id,
                 github_repo_id=repo_github_id,

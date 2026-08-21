@@ -83,6 +83,7 @@ class RepositoryManagerRepository:
             # Ensure default RepoConfig is initialized
             config = RepoConfig(repository_id=repo.id)
             self.session.add(config)
+            repo.config = config
 
         await self.session.flush()
         return repo

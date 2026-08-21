@@ -43,14 +43,46 @@ def format_inline_comment(finding: ReviewFinding) -> str:
         )
 
     if finding.code_snippet:
-        lines.extend(
-            [
-                "",
-                "```suggestion",
-                finding.code_snippet.strip(),
-                "```",
+        snippet = finding.code_snippet.strip()
+        # Check if the snippet contains placeholder ellipses or conceptual patterns
+        is_placeholder = any(
+            marker in snippet
+            for marker in [
+                "# ...",
+                "// ...",
+                "/* ... */",
+                "... other",
+                "// other",
+                "# other",
+                "... rest of",
+                "// rest of",
+                "# rest of",
             ]
         )
+        if is_placeholder:
+            # Render as illustrative code block to avoid broken GitHub one-click commits
+            lang = ""
+            if finding.file_path:
+                ext = finding.file_path.split(".")[-1]
+                lang = {"py": "python", "ts": "typescript", "js": "javascript", "go": "go", "rs": "rust"}.get(ext, "")
+            lines.extend(
+                [
+                    "",
+                    "**Example Code:**",
+                    f"```{lang}",
+                    snippet,
+                    "```",
+                ]
+            )
+        else:
+            lines.extend(
+                [
+                    "",
+                    "```suggestion",
+                    snippet,
+                    "```",
+                ]
+            )
 
     lines.extend(
         [

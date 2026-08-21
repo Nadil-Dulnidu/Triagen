@@ -77,6 +77,7 @@ class RepositoryService:
             review_language=review_language,
         )
         await self.session.commit()
+        await self.session.refresh(config)
         return config
 
     async def list_available_github_repositories(
@@ -88,25 +89,60 @@ class RepositoryService:
         connected_repos = await self.repo.list_by_org(organization_id)
         connected_github_ids = {r.github_repo_id for r in connected_repos}
 
-        # If installation_id is provided, query GitHub API
+        installation_ids: list[int] = []
         if installation_id:
+            installation_ids.append(installation_id)
+        else:
+            # Check organization record if present
             try:
-                client = GitHubClient(installation_id)
+                from sqlalchemy import select
+                from server.domains.auth.models import Organization
+
+                stmt = select(Organization).where(Organization.id == organization_id)
+                res = await self.session.execute(stmt)
+                org = res.scalar_one_or_none()
+                if org and org.github_installation_id:
+                    installation_ids.append(int(org.github_installation_id))
+            except Exception:
+                pass
+
+            # Fall back to querying GitHub App installations via App JWT
+            if not installation_ids:
+                from server.domains.github.auth import get_app_installations
+
+                installations = await get_app_installations()
+                for inst in installations:
+                    if "id" in inst:
+                        installation_ids.append(inst["id"])
+
+        all_gh_repos: list[dict[str, Any]] = []
+        for inst_id in installation_ids:
+            try:
+                client = GitHubClient(inst_id)
                 gh_repos = await client.list_installation_repositories()
-                return [
-                    GitHubAvailableRepoResponse(
-                        github_repo_id=r["id"],
-                        full_name=r["full_name"],
-                        name=r["name"],
-                        private=r.get("private", False),
-                        default_branch=r.get("default_branch", "main"),
-                        language=r.get("language"),
-                        is_connected=r["id"] in connected_github_ids,
-                    )
-                    for r in gh_repos
-                ]
+                all_gh_repos.extend(gh_repos)
             except Exception as e:
-                logger.warning("github_list_repos_failed", error=str(e))
+                logger.warning("github_list_repos_failed", installation_id=inst_id, error=str(e))
+
+        if all_gh_repos:
+            seen_ids: set[int] = set()
+            unique_repos: list[GitHubAvailableRepoResponse] = []
+            for r in all_gh_repos:
+                r_id = r.get("id")
+                if r_id and r_id not in seen_ids:
+                    seen_ids.add(r_id)
+                    unique_repos.append(
+                        GitHubAvailableRepoResponse(
+                            github_repo_id=r_id,
+                            full_name=r.get("full_name", ""),
+                            name=r.get("name", ""),
+                            private=r.get("private", False),
+                            default_branch=r.get("default_branch", "main"),
+                            language=r.get("language"),
+                            is_connected=r_id in connected_github_ids,
+                        )
+                    )
+            return unique_repos
 
         # Fallback to current connected repos representation
         return [

@@ -13,33 +13,17 @@ from server.infrastructure import get_logger
 
 logger = get_logger(__name__)
 
-_genai_client: genai.Client | None = None
-
-
 def get_genai_client(settings: Settings | None = None) -> genai.Client:
-    """Initialize or return the cached Google GenAI Client configured for Vertex AI."""
-    global _genai_client
+    """Initialize a Google GenAI Client configured for Vertex AI bound to the active loop."""
     settings = settings or get_settings()
 
-    if _genai_client is None:
-        # Configure Vertex AI client using GCP Project ID and Region
-        if settings.gcp_project_id:
-            _genai_client = genai.Client(
-                vertexai=True,
-                project=settings.gcp_project_id,
-                location=settings.gcp_region,
-            )
-            logger.info(
-                "genai_client_initialized_vertex",
-                project=settings.gcp_project_id,
-                region=settings.gcp_region,
-            )
-        else:
-            # Fallback to local default / ADC
-            _genai_client = genai.Client(vertexai=True)
-            logger.info("genai_client_initialized_default_adc")
-
-    return _genai_client
+    if settings.gcp_project_id:
+        return genai.Client(
+            vertexai=True,
+            project=settings.gcp_project_id,
+            location=settings.gcp_region,
+        )
+    return genai.Client(vertexai=True)
 
 
 class AgentExecutionResult:

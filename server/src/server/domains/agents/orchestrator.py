@@ -233,14 +233,21 @@ class ReviewOrchestrator:
     async def _run_review_agent(
         self,
         agent_name: str,
-        agent: SecurityAgent | StyleAgent,
+        agent: Any,
         context: PRDiffContext,
         on_progress: ProgressCallback | None = None,
+        memory_bundle: Any | None = None,
+        rag_snippets: list[str] | None = None,
     ) -> tuple[str, list[RawFinding], AgentExecutionResult]:
         if on_progress:
             await on_progress(f"agent.{agent_name}.started", {"agent": agent_name})
 
-        finding_list, exec_result = await agent.run(context)
+        if agent_name == "codebase_context":
+            finding_list, exec_result = await agent.run(
+                context, memory_bundle=memory_bundle, rag_snippets=rag_snippets
+            )
+        else:
+            finding_list, exec_result = await agent.run(context)
 
         if on_progress:
             await on_progress(

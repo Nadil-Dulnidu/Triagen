@@ -26,6 +26,7 @@ from server.domains.reviews.models import (  # noqa: F401
     ReviewFinding,
 )
 from server.domains.webhooks.models import WebhookEvent  # noqa: F401
+from server.config import get_settings
 from server.infrastructure.database import Base
 
 # Alembic Config object
@@ -38,11 +39,9 @@ if config.config_file_name is not None:
 # Target metadata for auto-generation
 target_metadata = Base.metadata
 
-# Override sqlalchemy.url from environment if available
-database_url = os.getenv(
-    "DATABASE_URL",
-    config.get_main_option("sqlalchemy.url"),
-)
+# Load database_url from application settings / .env
+settings = get_settings()
+database_url = os.getenv("DATABASE_URL") or settings.database_url or config.get_main_option("sqlalchemy.url")
 
 
 def run_migrations_offline() -> None:

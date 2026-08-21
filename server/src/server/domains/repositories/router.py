@@ -22,7 +22,21 @@ router = APIRouter(prefix="/repositories", tags=["Repositories"])
 github_router = APIRouter(prefix="/github", tags=["GitHub App"])
 
 
-# ── Repository Endpoints ──────────────────────────────────────────────
+async def _get_or_create_org_id(auth: AuthContext, db: AsyncSession) -> str:
+    """Ensure a valid organization ID exists in the database for foreign key constraints."""
+    if auth.organization_id:
+        return auth.organization_id
+    from server.domains.auth.repository import OrganizationRepository
+
+    org_repo = OrganizationRepository(db)
+    target_clerk_org_id = auth.clerk_org_id or f"org_{auth.clerk_user_id}"
+    org = await org_repo.get_by_clerk_id(target_clerk_org_id)
+    if not org:
+        org = await org_repo.create(
+            clerk_org_id=target_clerk_org_id,
+            name="Default Organization",
+        )
+    return org.id
 
 
 @router.get("", response_model=list[RepositoryResponse])
@@ -32,7 +46,7 @@ async def list_repositories(
     db: AsyncSession = Depends(get_db_session),
 ) -> list[RepositoryResponse]:
     """List connected repositories for the current organization."""
-    org_id = auth.organization.id if auth.organization else "00000000-0000-0000-0000-000000000000"
+    org_id = await _get_or_create_org_id(auth, db)
     service = RepositoryService(db)
     repos = await service.list_repositories(org_id, is_active)
     return [RepositoryResponse.model_validate(r) for r in repos]
@@ -140,7 +154,7 @@ async def list_github_available_repositories(
     db: AsyncSession = Depends(get_db_session),
 ) -> list[GitHubAvailableRepoResponse]:
     """List available repositories from GitHub App installation."""
-    org_id = auth.organization.id if auth.organization else "00000000-0000-0000-0000-000000000000"
+    org_id = await _get_or_create_org_id(auth, db)
     service = RepositoryService(db)
     return await service.list_available_github_repositories(org_id)
 
@@ -152,16 +166,27 @@ async def connect_repositories(
     db: AsyncSession = Depends(get_db_session),
 ) -> list[RepositoryResponse]:
     """Connect selected GitHub repositories to organization."""
-    org_id = auth.organization.id if auth.organization else "00000000-0000-0000-0000-000000000000"
+    org_id = await _get_or_create_org_id(auth, db)
     service = RepositoryService(db)
+    available_repos = await service.list_available_github_repositories(org_id)
+    repo_map = {r.github_repo_id: r for r in available_repos}
+
     connected: list[RepositoryResponse] = []
 
     for github_repo_id in req.repository_ids:
+        r_meta = repo_map.get(github_repo_id)
+        full_name = r_meta.full_name if r_meta else f"repo-{github_repo_id}"
+        name = r_meta.name if r_meta else f"repo-{github_repo_id}"
+        default_branch = r_meta.default_branch if r_meta else "main"
+        language = r_meta.language if r_meta else None
+
         repo = await service.repo.create_or_update(
             organization_id=org_id,
             github_repo_id=github_repo_id,
-            full_name=f"repo-{github_repo_id}",
-            name=f"repo-{github_repo_id}",
+            full_name=full_name,
+            name=name,
+            default_branch=default_branch,
+            language=language,
             is_active=True,
         )
         connected.append(RepositoryResponse.model_validate(repo))

@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from starlette.requests import Request
 
 from server.config import get_settings
 
@@ -34,7 +35,10 @@ class Base(DeclarativeBase):
     - UUID primary key by default
     - Consistent naming conventions for constraints
     - Type annotation support
+    - Eager defaults loading for server-generated columns (timestamps, IDs)
     """
+
+    __mapper_args__ = {"eager_defaults": True}
 
     metadata = MetaData(naming_convention=NAMING_CONVENTION)
 
@@ -45,8 +49,22 @@ class Base(DeclarativeBase):
     )
 
 
+def import_all_models() -> None:
+    """Import all domain models to ensure SQLAlchemy's mapper registry is fully populated."""
+    try:
+        import server.domains.analytics.models  # noqa: F401
+        import server.domains.auth.models  # noqa: F401
+        import server.domains.memory.models  # noqa: F401
+        import server.domains.repositories.models  # noqa: F401
+        import server.domains.reviews.models  # noqa: F401
+        import server.domains.webhooks.models  # noqa: F401
+    except ImportError:
+        pass
+
+
 def create_engine(database_url: str | None = None, **kwargs: Any) -> Any:
     """Create an async SQLAlchemy engine."""
+    import_all_models()
     settings = get_settings()
     url = database_url or settings.database_url
 
@@ -97,14 +115,16 @@ async def close_db() -> None:
         _session_factory = None
 
 
-async def get_db_session() -> AsyncGenerator[AsyncSession]:
+async def get_db_session(request: Request) -> AsyncGenerator[AsyncSession]:
     """FastAPI dependency that provides a database session.
 
-    Usage:
-        @router.get("/items")
-        async def list_items(db: AsyncSession = Depends(get_db_session)):
-            ...
+    Reuses the request-scoped session from request.state.db if available,
+    otherwise creates a new session from the session factory.
     """
+    if hasattr(request.state, "db") and request.state.db is not None:
+        yield request.state.db
+        return
+
     if _session_factory is None:
         raise RuntimeError("Database not initialized. Call init_db() first.")
 

@@ -31,7 +31,7 @@ async def list_org_memories(
     db: AsyncSession = Depends(get_db_session),
 ) -> list[OrgMemoryResponse]:
     """List organization standards and compliance memories."""
-    org_id = auth.organization.id if auth.organization else "00000000-0000-0000-0000-000000000000"
+    org_id = auth.organization_id or "00000000-0000-0000-0000-000000000000"
     service = MemoryService(db)
     memories = await service.list_org_memories(org_id, memory_type)
     return [OrgMemoryResponse.model_validate(m) for m in memories]
@@ -48,7 +48,7 @@ async def create_org_memory(
     db: AsyncSession = Depends(get_db_session),
 ) -> OrgMemoryResponse:
     """Create a new organization-wide standard or compliance memory."""
-    org_id = auth.organization.id if auth.organization else "00000000-0000-0000-0000-000000000000"
+    org_id = auth.organization_id or "00000000-0000-0000-0000-000000000000"
     service = MemoryService(db)
     memory = await service.create_org_memory(
         organization_id=org_id,
@@ -142,7 +142,7 @@ async def list_developer_memories(
     db: AsyncSession = Depends(get_db_session),
 ) -> list[DeveloperMemoryResponse]:
     """List developer coding style habits and feedback memories."""
-    org_id = auth.organization.id if auth.organization else None
+    org_id = auth.organization_id
     service = MemoryService(db)
     memories = await service.list_developer_memories(user_id, org_id)
     return [DeveloperMemoryResponse.model_validate(m) for m in memories]
@@ -160,7 +160,7 @@ async def create_developer_memory(
     db: AsyncSession = Depends(get_db_session),
 ) -> DeveloperMemoryResponse:
     """Create a developer preference memory."""
-    org_id = auth.organization.id if auth.organization else "00000000-0000-0000-0000-000000000000"
+    org_id = auth.organization_id or "00000000-0000-0000-0000-000000000000"
     service = MemoryService(db)
     memory = await service.create_developer_memory(
         user_id=user_id,

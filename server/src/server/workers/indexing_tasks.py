@@ -10,7 +10,7 @@ from sqlalchemy import select
 
 from server.domains.agents.runner import generate_embeddings
 from server.domains.github.client import GitHubClient
-from server.domains.reviews.models import Repository
+from server.domains.repositories.models import Repository
 from server.infrastructure import get_logger
 from server.infrastructure.celery_app import celery_app
 from server.infrastructure.database import create_engine, create_session_factory
@@ -20,12 +20,7 @@ logger = get_logger(__name__)
 
 
 def _run_async(coro: Any) -> Any:
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        return loop.run_until_complete(coro)
-    finally:
-        loop.close()
+    return asyncio.run(coro)
 
 
 @celery_app.task(

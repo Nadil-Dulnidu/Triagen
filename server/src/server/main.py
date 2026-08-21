@@ -96,7 +96,16 @@ def create_app() -> FastAPI:
         if _session_factory is not None:
             async with _session_factory() as session:
                 request.state.db = session
-                return await call_next(request)
+                try:
+                    response = await call_next(request)
+                    if response.status_code < 400:
+                        await session.commit()
+                    else:
+                        await session.rollback()
+                    return response
+                except Exception:
+                    await session.rollback()
+                    raise
         request.state.db = None
         return await call_next(request)
 

@@ -24,7 +24,7 @@ async def get_analytics_overview(
     db: AsyncSession = Depends(get_db_session),
 ) -> AnalyticsOverviewResponse:
     """Get high-level organization review velocity, time saved, and quality metrics."""
-    org_id = auth.organization.id if auth.organization else "00000000-0000-0000-0000-000000000000"
+    org_id = auth.organization_id or "00000000-0000-0000-0000-000000000000"
     service = AnalyticsService(db)
     return await service.get_overview(org_id)
 
@@ -35,7 +35,7 @@ async def get_agent_performance(
     db: AsyncSession = Depends(get_db_session),
 ) -> list[AgentPerformanceMetric]:
     """Get AI review agent execution metrics and token usage."""
-    org_id = auth.organization.id if auth.organization else "00000000-0000-0000-0000-000000000000"
+    org_id = auth.organization_id or "00000000-0000-0000-0000-000000000000"
     service = AnalyticsService(db)
     overview = await service.get_overview(org_id)
     return overview.agent_performance
@@ -47,7 +47,7 @@ async def get_top_categories(
     db: AsyncSession = Depends(get_db_session),
 ) -> list[CategoryHotspot]:
     """Get top finding categories and issue hotspots."""
-    org_id = auth.organization.id if auth.organization else "00000000-0000-0000-0000-000000000000"
+    org_id = auth.organization_id or "00000000-0000-0000-0000-000000000000"
     service = AnalyticsService(db)
     overview = await service.get_overview(org_id)
     return overview.top_categories
