@@ -1,5 +1,5 @@
 /**
- * PullSense Client API Library
+ * Triagen Client API Library
  * Typed HTTP client interfacing with FastAPI backend (/api/v1).
  */
 

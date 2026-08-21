@@ -193,3 +193,28 @@ async def connect_repositories(
 
     await db.commit()
     return connected
+
+
+@router.post("/{repository_id}/index")
+async def trigger_repository_indexing(
+    repository_id: str,
+    auth: AuthContext = Depends(get_auth_context),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict[str, str]:
+    """Trigger Celery background indexing to embed and store repository codebase into Pinecone."""
+    service = RepositoryService(db)
+    repo = await service.repo.get_by_id(repository_id)
+    if not repo:
+        raise HTTPException(status_code=404, detail="Repository not found")
+
+    from server.domains.auth.models import Organization
+    org = await db.get(Organization, repo.organization_id)
+    inst_id = int(org.github_installation_id) if org and org.github_installation_id else None
+
+    if not inst_id:
+        raise HTTPException(status_code=400, detail="No GitHub App installation linked to organization")
+
+    from server.workers.indexing_tasks import index_repository_codebase
+    task = index_repository_codebase.delay(repository_id=repo.id, installation_id=inst_id)
+
+    return {"status": "enqueued", "task_id": task.id, "repository_id": repo.id}

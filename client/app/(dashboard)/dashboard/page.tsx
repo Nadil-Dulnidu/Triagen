@@ -357,7 +357,7 @@ export default function DashboardPage() {
               <h3 className="text-sm font-semibold text-foreground">Active Team Memory</h3>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              PullSense enforces custom architectural guidelines, security policies, and team habits on every PR review.
+              Triagen enforces custom architectural guidelines, security policies, and team habits on every PR review.
             </p>
             <Link href="/memory" className="block pt-1">
               <Button size="sm" variant="secondary" className="w-full text-xs bg-violet-900/40 hover:bg-violet-900/60 text-violet-200">

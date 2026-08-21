@@ -38,7 +38,7 @@ export default function RepositoriesPage() {
   const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
   const [selectedGithubIds, setSelectedGithubIds] = useState<number[]>([]);
-  const githubAppName = process.env.NEXT_PUBLIC_GITHUB_APP_NAME || "pullsense-ai";
+  const githubAppName = process.env.NEXT_PUBLIC_GITHUB_APP_NAME || "triagen-ai";
 
   useEffect(() => {
     let isMounted = true;
@@ -324,7 +324,7 @@ export default function RepositoriesPage() {
           </div>
           <h3 className="text-lg font-semibold">No repositories connected yet</h3>
           <p className="mt-1 max-w-md text-sm text-muted-foreground leading-relaxed">
-            Install the PullSense GitHub App or connect your repositories to start automated AI code reviews on every pull request.
+            Install the Triagen GitHub App or connect your repositories to start automated AI code reviews on every pull request.
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             <Button
@@ -358,7 +358,7 @@ export default function RepositoriesPage() {
                     GitHub App Connection Guide
                   </h3>
                   <p className="text-xs text-muted-foreground">
-                    Step-by-step instructions to link GitHub repositories to PullSense.
+                    Step-by-step instructions to link GitHub repositories to Triagen.
                   </p>
                 </div>
               </div>
