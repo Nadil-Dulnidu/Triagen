@@ -10,7 +10,9 @@ from httpx import ASGITransport, AsyncClient
 
 # Set test environment variables before importing server modules
 os.environ["APP_ENV"] = "test"
-os.environ["DATABASE_URL"] = "postgresql+asyncpg://postgres:sql2025#zinD@localhost:5432/pullsense_test"
+os.environ["DATABASE_URL"] = (
+    "postgresql+asyncpg://postgres:sql2025#zinD@localhost:5432/pullsense_test"
+)
 os.environ["REDIS_URL"] = "redis://localhost:6379/0"
 os.environ["CELERY_BROKER_URL"] = "redis://localhost:6379/1"
 os.environ["CELERY_RESULT_BACKEND"] = "redis://localhost:6379/2"

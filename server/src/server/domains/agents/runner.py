@@ -120,3 +120,39 @@ async def run_gemini_agent(
         output_tokens=output_tokens,
         duration_ms=elapsed_ms,
     )
+
+
+async def generate_embeddings(
+    texts: list[str] | str,
+    model_name: str | None = None,
+    settings: Settings | None = None,
+) -> list[list[float]]:
+    """Generate vector embeddings for input text(s) using Vertex AI."""
+    settings = settings or get_settings()
+    client = get_genai_client(settings)
+    model = model_name or settings.embedding_model
+
+    input_list = [texts] if isinstance(texts, str) else texts
+    if not input_list:
+        return []
+
+    try:
+        embeddings: list[list[float]] = []
+        for text in input_list:
+            response = await client.aio.models.embed_content(
+                model=model,
+                contents=text,
+            )
+            # Extract embedding values
+            values: list[float] = []
+            if hasattr(response, "embedding") and hasattr(response.embedding, "values"):
+                values = list(response.embedding.values)
+            elif hasattr(response, "embeddings") and response.embeddings:
+                values = list(response.embeddings[0].values)
+            embeddings.append(values)
+
+        return embeddings
+    except Exception as e:
+        logger.warning("generate_embeddings_failed", model=model, error=str(e))
+        # Return empty embeddings on error for graceful fallback
+        return [[] for _ in input_list]

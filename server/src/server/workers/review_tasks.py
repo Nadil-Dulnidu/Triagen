@@ -140,9 +140,22 @@ async def _execute_pr_review(webhook_event_id: str) -> dict[str, Any]:
             owner, repo_short = repo_full_name.split("/", 1)
             pr_context = await gh_client.get_full_pr_context(owner, repo_short, pr_number)
 
-            # 5. Run Multi-Agent Orchestrator
+            # 5. Fetch Team Memory Bundle (Org Standards, Repo Conventions, Developer Habits)
+            from server.domains.memory.service import MemoryService
+
+            memory_service = MemoryService(session)
+            memory_bundle = await memory_service.get_review_memory_bundle(
+                organization_id=repo_entity.organization_id if repo_entity else None,
+                repository_id=repo_entity.id if repo_entity else None,
+            )
+
+            # 6. Run Multi-Agent Orchestrator
             orchestrator = ReviewOrchestrator()
-            orch_result = await orchestrator.run_pipeline(pr_context, on_progress=on_progress)
+            orch_result = await orchestrator.run_pipeline(
+                pr_context,
+                memory_bundle=memory_bundle,
+                on_progress=on_progress,
+            )
 
             # 6. Persist Findings & Telemetry
             findings_dicts = [f.model_dump() for f in orch_result.aggregator_output.findings]

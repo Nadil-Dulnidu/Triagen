@@ -13,11 +13,14 @@ from server.domains.agents.base import (
     RawFinding,
     TriageOutput,
 )
+from server.domains.agents.codebase_context import CodebaseContextAgent
 from server.domains.agents.runner import AgentExecutionResult
 from server.domains.agents.security import SecurityAgent
 from server.domains.agents.style import StyleAgent
+from server.domains.agents.test_coverage import TestCoverageAgent
 from server.domains.agents.triage import TriageAgent
 from server.domains.github.schemas import PRDiffContext
+from server.domains.memory.schemas import MemoryContextBundle
 from server.infrastructure import get_logger
 
 logger = get_logger(__name__)
@@ -75,11 +78,15 @@ class ReviewOrchestrator:
         self.triage_agent = TriageAgent(settings=self.settings)
         self.security_agent = SecurityAgent(settings=self.settings)
         self.style_agent = StyleAgent(settings=self.settings)
+        self.test_coverage_agent = TestCoverageAgent(settings=self.settings)
+        self.codebase_context_agent = CodebaseContextAgent(settings=self.settings)
         self.aggregator_agent = AggregatorAgent(settings=self.settings)
 
     async def run_pipeline(
         self,
         context: PRDiffContext,
+        memory_bundle: MemoryContextBundle | None = None,
+        rag_snippets: list[str] | None = None,
         on_progress: ProgressCallback | None = None,
     ) -> ReviewOrchestrationResult:
         """Execute the multi-stage review pipeline: Triage -> Parallel Agents -> Aggregator."""
@@ -88,9 +95,9 @@ class ReviewOrchestrator:
         start_time = time.perf_counter()
         telemetries: list[AgentTelemetry] = []
 
-        # ── Step 1: Triage ───────────────────────────────────────────
+        # ── Step 1: Triage Assessment ────────────────────────────────
         if on_progress:
-            await on_progress("review.triaging", {"stage": "triage"})
+            await on_progress("review.triaging", {"stage": "triaging"})
 
         triage_output, triage_exec = await self.triage_agent.run(context)
         telemetries.append(
@@ -117,7 +124,7 @@ class ReviewOrchestrator:
             )
 
         # ── Step 2: Parallel Review Agents ───────────────────────────
-        active_agents = triage_output.recommended_agents
+        active_agents = triage_output.recommended_agents or ["security", "style", "test_coverage"]
         agent_tasks: list[Any] = []
 
         if "security" in active_agents:
@@ -128,6 +135,25 @@ class ReviewOrchestrator:
         if "style" in active_agents:
             agent_tasks.append(
                 self._run_review_agent("style", self.style_agent, context, on_progress)
+            )
+
+        if "test_coverage" in active_agents or "tests" in active_agents:
+            agent_tasks.append(
+                self._run_review_agent(
+                    "test_coverage", self.test_coverage_agent, context, on_progress
+                )
+            )
+
+        if memory_bundle or rag_snippets or "codebase_context" in active_agents:
+            agent_tasks.append(
+                self._run_review_agent(
+                    "codebase_context",
+                    self.codebase_context_agent,
+                    context,
+                    on_progress,
+                    memory_bundle=memory_bundle,
+                    rag_snippets=rag_snippets,
+                )
             )
 
         # Default fallback if no agents selected
