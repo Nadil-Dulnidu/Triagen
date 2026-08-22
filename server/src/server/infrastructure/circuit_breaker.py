@@ -18,8 +18,8 @@ F = TypeVar("F", bound=Callable[..., Any])
 
 
 class CircuitState(StrEnum):
-    CLOSED = "CLOSED"      # Normal operation: requests pass through
-    OPEN = "OPEN"          # Failing: requests are fast-failed without calling remote service
+    CLOSED = "CLOSED"  # Normal operation: requests pass through
+    OPEN = "OPEN"  # Failing: requests are fast-failed without calling remote service
     HALF_OPEN = "HALF_OPEN"  # Probing: trial request allowed to verify remote recovery
 
 

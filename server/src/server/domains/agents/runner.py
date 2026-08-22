@@ -13,6 +13,7 @@ from server.infrastructure import get_logger
 
 logger = get_logger(__name__)
 
+
 def get_genai_client(settings: Settings | None = None) -> genai.Client:
     """Initialize a Google GenAI Client configured for Vertex AI bound to the active loop."""
     settings = settings or get_settings()

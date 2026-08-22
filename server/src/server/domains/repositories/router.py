@@ -208,6 +208,7 @@ async def trigger_repository_indexing(
         raise HTTPException(status_code=404, detail="Repository not found")
 
     from server.domains.auth.models import Organization
+
     org = await db.get(Organization, repo.organization_id)
     inst_id = int(org.github_installation_id) if org and org.github_installation_id else None
 
@@ -218,6 +219,7 @@ async def trigger_repository_indexing(
         )
 
     from server.workers.indexing_tasks import index_repository_codebase
+
     task = index_repository_codebase.delay(repository_id=repo.id, installation_id=inst_id)
 
     return {"status": "enqueued", "task_id": task.id, "repository_id": repo.id}

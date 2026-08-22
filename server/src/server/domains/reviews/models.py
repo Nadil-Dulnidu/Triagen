@@ -95,9 +95,7 @@ class Review(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
-    pull_request: Mapped[PullRequest] = relationship(
-        back_populates="reviews", lazy="selectin"
-    )
+    pull_request: Mapped[PullRequest] = relationship(back_populates="reviews", lazy="selectin")
     findings: Mapped[list[ReviewFinding]] = relationship(
         back_populates="review", cascade="all, delete-orphan", lazy="selectin"
     )
