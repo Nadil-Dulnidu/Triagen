@@ -6,7 +6,7 @@ variable "project_id" {
 variable "project_name" {
   description = "Application project prefix"
   type        = string
-  default     = "pullsense"
+  default     = "triagen"
 }
 
 variable "environment" {
@@ -21,7 +21,7 @@ variable "enable_workload_identity" {
 }
 
 variable "github_repo" {
-  description = "GitHub repository (e.g. Nadil-Dulnidu/PullSense-Web)"
+  description = "GitHub repository (e.g. Nadil-Dulnidu/Triagen)"
   type        = string
-  default     = "Nadil-Dulnidu/PullSense-Web"
+  default     = "Nadil-Dulnidu/Triagen"
 }

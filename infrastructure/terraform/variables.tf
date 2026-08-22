@@ -24,7 +24,7 @@ variable "region" {
 variable "github_repo" {
   description = "GitHub repository for Workload Identity"
   type        = string
-  default     = "Nadil-Dulnidu/PullSense-Web"
+  default     = "Nadil-Dulnidu/Triagen"
 }
 
 variable "github_app_id" {

@@ -16,9 +16,9 @@ permissions:
   id-token: write
 
 env:
-  PROJECT_ID: ${{ vars.GCP_PROJECT_ID || 'vertex-ai-499520' }}
-  REGION: ${{ vars.GCP_REGION || 'us-central1' }}
-  GAR_REPOSITORY: ${{ vars.GCP_GAR_REPOSITORY || 'triagen-prod-repo' }}
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  REGION: ${{ vars.GCP_REGION }}
+  GAR_REPOSITORY: ${{ vars.GCP_GAR_REPOSITORY }}
 
 jobs:
   build-and-deploy:
@@ -46,11 +46,11 @@ jobs:
       # 1. Build & Push Server Containers (FastAPI API & Celery Worker)
       - name: Build and Push Backend Images
         run: |
-          API_IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/pullsense-api:${{ github.sha }}"
-          API_LATEST="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/pullsense-api:latest"
+          API_IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/triagen-api:${{ github.sha }}"
+          API_LATEST="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/triagen-api:latest"
           
-          WORKER_IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/pullsense-worker:${{ github.sha }}"
-          WORKER_LATEST="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/pullsense-worker:latest"
+          WORKER_IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/triagen-worker:${{ github.sha }}"
+          WORKER_LATEST="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/triagen-worker:latest"
           
           docker build -t $API_IMAGE -t $API_LATEST ./server
           docker push $API_IMAGE
@@ -63,11 +63,11 @@ jobs:
       # 2. Build & Push Frontend Container (Next.js 15)
       - name: Build and Push Frontend Image
         run: |
-          IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/pullsense-client:${{ github.sha }}"
-          LATEST_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/pullsense-client:latest"
+          IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/triagen-client:${{ github.sha }}"
+          LATEST_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/triagen-client:latest"
           
           docker build \
-            --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="${{ vars.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || 'pk_test_c3VwZXItc2VydmFsLTg3OTIuY2xlcmsuYWNjb3VudHMuZGV2JA' }}" \
+            --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="${{ vars.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}" \
             -t $IMAGE_URI -t $LATEST_URI ./client
           docker push $IMAGE_URI
           docker push $LATEST_URI
@@ -78,7 +78,7 @@ jobs:
         with:
           service: triagen-prod-api
           region: ${{ env.REGION }}
-          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/pullsense-api:${{ github.sha }}
+          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/triagen-api:${{ github.sha }}
 
       # 4. Deploy Celery Review Worker to Cloud Run
       - name: Deploy Celery Worker to Cloud Run
@@ -86,7 +86,7 @@ jobs:
         with:
           service: triagen-prod-worker
           region: ${{ env.REGION }}
-          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/pullsense-worker:${{ github.sha }}
+          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/triagen-worker:${{ github.sha }}
 
       # 5. Deploy Next.js Frontend Client to Cloud Run
       - name: Deploy Next.js Frontend to Cloud Run
@@ -94,4 +94,4 @@ jobs:
         with:
           service: triagen-prod-client
           region: ${{ env.REGION }}
-          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/pullsense-client:${{ github.sha }}
+          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/triagen-client:${{ github.sha }}
