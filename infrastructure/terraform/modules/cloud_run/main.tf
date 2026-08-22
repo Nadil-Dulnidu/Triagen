@@ -73,6 +73,38 @@ resource "google_cloud_run_v2_service" "api" {
         name  = "GITHUB_APP_ID"
         value = var.github_app_id
       }
+      env {
+        name  = "GITHUB_APP_CLIENT_ID"
+        value = "Iv23libPm3d0a5UoOfNs"
+      }
+      env {
+        name  = "CLERK_JWKS_URL"
+        value = "https://super-serval-8792.clerk.accounts.dev/.well-known/jwks.json"
+      }
+      env {
+        name  = "CLERK_ISSUER"
+        value = "https://super-serval-8792.clerk.accounts.dev"
+      }
+      env {
+        name  = "GEMINI_FLASH_MODEL"
+        value = "gemini-2.5-flash"
+      }
+      env {
+        name  = "GEMINI_PRO_MODEL"
+        value = "gemini-2.5-pro"
+      }
+      env {
+        name  = "EMBEDDING_MODEL"
+        value = "text-embedding-004"
+      }
+      env {
+        name  = "PINECONE_INDEX_NAME"
+        value = "pullsense"
+      }
+      env {
+        name  = "RATE_LIMIT_REVIEWS_PER_HOUR"
+        value = "100"
+      }
 
       # Secrets mounted from Secret Manager
       env {
@@ -204,6 +236,38 @@ resource "google_cloud_run_v2_service" "worker" {
         name  = "GITHUB_APP_ID"
         value = var.github_app_id
       }
+      env {
+        name  = "GITHUB_APP_CLIENT_ID"
+        value = "Iv23libPm3d0a5UoOfNs"
+      }
+      env {
+        name  = "CLERK_JWKS_URL"
+        value = "https://super-serval-8792.clerk.accounts.dev/.well-known/jwks.json"
+      }
+      env {
+        name  = "CLERK_ISSUER"
+        value = "https://super-serval-8792.clerk.accounts.dev"
+      }
+      env {
+        name  = "GEMINI_FLASH_MODEL"
+        value = "gemini-2.5-flash"
+      }
+      env {
+        name  = "GEMINI_PRO_MODEL"
+        value = "gemini-2.5-pro"
+      }
+      env {
+        name  = "EMBEDDING_MODEL"
+        value = "text-embedding-004"
+      }
+      env {
+        name  = "PINECONE_INDEX_NAME"
+        value = "pullsense"
+      }
+      env {
+        name  = "RATE_LIMIT_REVIEWS_PER_HOUR"
+        value = "100"
+      }
 
       env {
         name = "GITHUB_APP_PRIVATE_KEY"
@@ -276,6 +340,34 @@ resource "google_cloud_run_v2_service" "client" {
       env {
         name  = "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
         value = var.clerk_publishable_key
+      }
+      env {
+        name  = "NEXT_PUBLIC_GITHUB_APP_NAME"
+        value = "Triagen-App"
+      }
+      env {
+        name  = "NEXT_PUBLIC_CLERK_SIGN_IN_URL"
+        value = "/sign-in"
+      }
+      env {
+        name  = "NEXT_PUBLIC_CLERK_SIGN_UP_URL"
+        value = "/sign-up"
+      }
+      env {
+        name  = "NEXT_PUBLIC_CLERK_SIGN_IN_FORCE_REDIRECT_URL"
+        value = "/dashboard"
+      }
+      env {
+        name  = "NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL"
+        value = "/dashboard"
+      }
+      env {
+        name  = "NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL"
+        value = "/dashboard"
+      }
+      env {
+        name  = "NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL"
+        value = "/dashboard"
       }
       env {
         name = "CLERK_SECRET_KEY"
