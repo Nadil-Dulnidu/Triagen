@@ -140,6 +140,9 @@ async def run_migrations(database_url: str | None = None) -> None:
             if not ini_path:
                 return False
 
+            import os
+            os.environ["DATABASE_URL"] = url
+
             alembic_cfg = Config(str(ini_path))
             alembic_cfg.set_main_option("sqlalchemy.url", url)
             alembic_cfg.set_main_option("script_location", str(ini_path.parent))
