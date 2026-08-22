@@ -13,8 +13,9 @@ COPY pyproject.toml README.md* uv.lock* ./
 # Install dependencies
 RUN uv sync --no-dev --no-install-project
 
-# Copy source code
+# Copy source code and migrations
 COPY src/ src/
+COPY migrations/ migrations/
 
 # Install the project
 RUN uv sync --no-dev
@@ -27,6 +28,7 @@ WORKDIR /app
 # Copy installed packages and app from builder
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/src /app/src
+COPY --from=builder /app/migrations /app/migrations
 
 # Set path to use virtual environment
 ENV PATH="/app/.venv/bin:$PATH"

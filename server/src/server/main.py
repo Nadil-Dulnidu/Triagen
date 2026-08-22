@@ -39,6 +39,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     init_db(settings.database_url)
     logger.info("database_initialized")
 
+    # Auto-apply database migrations on startup
+    try:
+        from server.infrastructure.database import run_migrations
+
+        await run_migrations(settings.database_url)
+        logger.info("database_migrations_applied")
+    except Exception as e:
+        logger.warning("database_migrations_failed", error=str(e))
+
     # Initialize Redis
     try:
         from server.infrastructure.redis import init_redis

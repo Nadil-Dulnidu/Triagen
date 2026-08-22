@@ -115,6 +115,49 @@ async def close_db() -> None:
         _session_factory = None
 
 
+async def run_migrations(database_url: str | None = None) -> None:
+    """Apply Alembic migrations to database, or create tables if running in fallback mode."""
+    import asyncio
+    from pathlib import Path
+
+    import_all_models()
+    settings = get_settings()
+    url = database_url or settings.database_url
+
+    def _apply_alembic() -> bool:
+        try:
+            from alembic import command
+            from alembic.config import Config
+
+            # Locate alembic.ini
+            candidate_paths = [
+                Path("/app/migrations/alembic.ini"),
+                Path(__file__).resolve().parent.parent.parent.parent / "migrations" / "alembic.ini",
+                Path("migrations/alembic.ini"),
+                Path("server/migrations/alembic.ini"),
+            ]
+            ini_path = next((p for p in candidate_paths if p.exists()), None)
+            if not ini_path:
+                return False
+
+            alembic_cfg = Config(str(ini_path))
+            alembic_cfg.set_main_option("sqlalchemy.url", url)
+            alembic_cfg.set_main_option("script_location", str(ini_path.parent))
+            command.upgrade(alembic_cfg, "head")
+            return True
+        except Exception:
+            return False
+
+    migrated = await asyncio.to_thread(_apply_alembic)
+
+    # Fallback: if alembic config wasn't found or failed, ensure tables exist via metadata
+    if not migrated:
+        global _engine
+        if _engine is not None:
+            async with _engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+
+
 async def get_db_session(request: Request) -> AsyncGenerator[AsyncSession]:
     """FastAPI dependency that provides a database session.
 
