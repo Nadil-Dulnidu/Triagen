@@ -41,15 +41,21 @@ async def close_redis() -> None:
 
 
 def get_redis() -> aioredis.Redis:
-    """Get the Redis client instance.
+    """Get the Redis client instance (lazily initialized if needed).
 
-    Usage as FastAPI dependency:
+    Usage as FastAPI dependency or background worker helper:
         @router.get("/cached")
         async def get_cached(redis: Redis = Depends(get_redis)):
             ...
     """
+    global _redis_client
     if _redis_client is None:
-        raise RuntimeError("Redis not initialized. Call init_redis() first.")
+        settings = get_settings()
+        _redis_client = aioredis.from_url(
+            settings.redis_url,
+            decode_responses=True,
+            max_connections=20,
+        )
     return _redis_client
 
 

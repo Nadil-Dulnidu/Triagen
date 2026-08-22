@@ -33,7 +33,7 @@ dev-server: ## Run FastAPI backend server locally with hot-reload
 	cd server && uv run uvicorn server.main:create_app --factory --reload --port 8000
 
 dev-worker: ## Run Celery background worker locally
-	cd server && uv run celery -A server.infrastructure.celery_app:celery_app worker --loglevel=info --concurrency=2
+	cd server && uv run celery -A server.infrastructure.celery_app:celery_app worker --loglevel=info --pool=solo -Q default,reviews,sync
 
 dev-client: ## Run Next.js frontend dev server locally
 	cd client && npm run dev
@@ -97,6 +97,26 @@ build: build-client ## Build production bundles
 
 build-client: ## Build production Next.js frontend bundle
 	cd client && npm run build
+
+# ── End-to-End Testing & Utilities ───────────────────────────────────
+test-e2e: ## Run Playwright end-to-end tests
+	cd client && npm run test:e2e
+
+seed-demo: ## Seed realistic PR reviews, repos, and memory rules
+	curl -s -X POST http://localhost:8000/api/v1/reviews/seed
+
+openapi-sync: ## Generate OpenAPI specification and verify schemas
+	bash scripts/generate-api-client.sh
+
+# ── Terraform Infrastructure as Code (Google Cloud & Docker) ──────────
+tf-init: ## Initialize Terraform infrastructure
+	terraform -chdir=infrastructure/terraform init
+
+tf-plan: ## Plan Terraform infrastructure changes
+	terraform -chdir=infrastructure/terraform plan
+
+tf-apply: ## Apply Terraform infrastructure changes to GCP
+	terraform -chdir=infrastructure/terraform apply
 
 # ── Cleanup ──────────────────────────────────────────────────────────
 clean: ## Remove temporary files, caches, and build artifacts

@@ -1,0 +1,95 @@
+name: Continuous Deployment (Cloud Run)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "server/**"
+      - "client/**"
+      - "infrastructure/**"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID || 'vertex-ai-499520' }}
+  REGION: ${{ vars.GCP_REGION || 'us-central1' }}
+  GAR_REPOSITORY: ${{ vars.GCP_GAR_REPOSITORY || 'triagen-prod-repo' }}
+  WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+  SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy to Cloud Run
+    runs-on: ubuntu-latest
+
+    # Only run if Workload Identity secrets are configured in GitHub Settings
+    if: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && secrets.GCP_SERVICE_ACCOUNT != '' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      # 1. Build & Push Server Container (FastAPI & Celery)
+      - name: Build and Push Backend Image
+        run: |
+          IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/pullsense-api:${{ github.sha }}"
+          LATEST_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/pullsense-api:latest"
+          
+          docker build -t $IMAGE_URI -t $LATEST_URI ./server
+          docker push $IMAGE_URI
+          docker push $LATEST_URI
+
+      # 2. Build & Push Frontend Container (Next.js 15)
+      - name: Build and Push Frontend Image
+        run: |
+          IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/pullsense-client:${{ github.sha }}"
+          LATEST_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/pullsense-client:latest"
+          
+          docker build \
+            --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="${{ vars.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || 'pk_test_c3VwZXItc2VydmFsLTg3OTIuY2xlcmsuYWNjb3VudHMuZGV2JA' }}" \
+            -t $IMAGE_URI -t $LATEST_URI ./client
+          docker push $IMAGE_URI
+          docker push $LATEST_URI
+
+      # 3. Deploy FastAPI Backend API to Cloud Run
+      - name: Deploy FastAPI Backend to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: triagen-prod-api
+          region: ${{ env.REGION }}
+          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/pullsense-api:${{ github.sha }}
+
+      # 4. Deploy Celery Review Worker to Cloud Run
+      - name: Deploy Celery Worker to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: triagen-prod-worker
+          region: ${{ env.REGION }}
+          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/pullsense-api:${{ github.sha }}
+
+      # 5. Deploy Next.js Frontend Client to Cloud Run
+      - name: Deploy Next.js Frontend to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: triagen-prod-client
+          region: ${{ env.REGION }}
+          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/pullsense-client:${{ github.sha }}

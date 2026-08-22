@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -22,7 +22,7 @@ class PullRequest(Base):
         ForeignKey("repositories.id", ondelete="CASCADE"),
         index=True,
     )
-    github_pr_id: Mapped[int] = mapped_column(Integer, index=True)
+    github_pr_id: Mapped[int] = mapped_column(BigInteger, index=True)
     pr_number: Mapped[int] = mapped_column(Integer)
     title: Mapped[str] = mapped_column(Text)
     author_github_username: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -85,7 +85,7 @@ class Review(Base):
     critical_count: Mapped[int] = mapped_column(Integer, default=0)
     warning_count: Mapped[int] = mapped_column(Integer, default=0)
     suggestion_count: Mapped[int] = mapped_column(Integer, default=0)
-    github_review_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    github_review_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     total_tokens_used: Mapped[int] = mapped_column(Integer, default=0)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -95,12 +95,12 @@ class Review(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
-    pull_request: Mapped[PullRequest] = relationship(back_populates="reviews")
+    pull_request: Mapped[PullRequest] = relationship(back_populates="reviews", lazy="selectin")
     findings: Mapped[list[ReviewFinding]] = relationship(
-        back_populates="review", cascade="all, delete-orphan"
+        back_populates="review", cascade="all, delete-orphan", lazy="selectin"
     )
     agent_runs: Mapped[list[ReviewAgentRun]] = relationship(
-        back_populates="review", cascade="all, delete-orphan"
+        back_populates="review", cascade="all, delete-orphan", lazy="selectin"
     )
 
 

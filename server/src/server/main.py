@@ -87,6 +87,22 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    # Security headers middleware
+    @app.middleware("http")
+    async def security_headers_middleware(request: Request, call_next: Any) -> Response:
+        """Inject production-grade HTTP security headers."""
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "geolocation=(), camera=(), microphone=()"
+        if settings.is_production:
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=31536000; includeSubDomains; preload"
+            )
+        return response
+
     # Database session middleware — injects session into request.state
     @app.middleware("http")
     async def db_session_middleware(request: Request, call_next: Any) -> Response:
@@ -96,7 +112,16 @@ def create_app() -> FastAPI:
         if _session_factory is not None:
             async with _session_factory() as session:
                 request.state.db = session
-                return await call_next(request)
+                try:
+                    response = await call_next(request)
+                    if response.status_code < 400:
+                        await session.commit()
+                    else:
+                        await session.rollback()
+                    return response
+                except Exception:
+                    await session.rollback()
+                    raise
         request.state.db = None
         return await call_next(request)
 
@@ -108,7 +133,16 @@ def create_app() -> FastAPI:
 
 def _register_routes(app: FastAPI) -> None:
     """Register all API routers."""
+    from server.domains.analytics.router import router as analytics_router
     from server.domains.auth.router import router as auth_router
+    from server.domains.memory.router import router as memory_router
+    from server.domains.repositories.router import (
+        github_router,
+    )
+    from server.domains.repositories.router import (
+        router as repositories_router,
+    )
+    from server.domains.reviews.router import router as reviews_router
     from server.domains.webhooks.router import router as webhook_router
 
     # Health checks (no prefix)
@@ -151,4 +185,9 @@ def _register_routes(app: FastAPI) -> None:
     # API v1 routes
     api_v1_prefix = "/api/v1"
     app.include_router(auth_router, prefix=api_v1_prefix)
+    app.include_router(analytics_router, prefix=api_v1_prefix)
+    app.include_router(github_router, prefix=api_v1_prefix)
+    app.include_router(memory_router, prefix=api_v1_prefix)
+    app.include_router(repositories_router, prefix=api_v1_prefix)
+    app.include_router(reviews_router, prefix=api_v1_prefix)
     app.include_router(webhook_router, prefix=api_v1_prefix)

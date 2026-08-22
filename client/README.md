@@ -1,6 +1,7 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Triagen Web Client
 
-## Getting Started
+Triagen frontend built with Next.js 16 (App Router), Tailwind CSS v4, Base UI / Shadcn UI primitives, and Clerk Authentication.
+
 
 First, run the development server:
 

@@ -1,23 +1,4 @@
 services:
-  # ── PostgreSQL 16 ──────────────────────────────────────────────────
-  db:
-    image: postgres:16-alpine
-    container_name: pullsense-db
-    restart: unless-stopped
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: pullsense
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   # ── Redis 7 ────────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
@@ -44,7 +25,7 @@ services:
       APP_ENV: development
       APP_DEBUG: "true"
       APP_LOG_LEVEL: DEBUG
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/pullsense
+      DATABASE_URL: postgresql+asyncpg://postgres:sql2025%23zinD@localhost:5432/pullsense
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
       CELERY_RESULT_BACKEND: redis://redis:6379/2
@@ -53,8 +34,6 @@ services:
     volumes:
       - ./server/src:/app/src
     depends_on:
-      db:
-        condition: service_healthy
       redis:
         condition: service_healthy
 
@@ -68,7 +47,7 @@ services:
     environment:
       APP_ENV: development
       APP_LOG_LEVEL: DEBUG
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/pullsense
+      DATABASE_URL: postgresql+asyncpg://postgres:sql2025%23zinD@localhost:5432/pullsense
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
       CELERY_RESULT_BACKEND: redis://redis:6379/2
@@ -77,8 +56,6 @@ services:
     volumes:
       - ./server/src:/app/src
     depends_on:
-      db:
-        condition: service_healthy
       redis:
         condition: service_healthy
 
@@ -100,6 +77,3 @@ services:
       - ./client:/app
       - /app/node_modules
       - /app/.next
-
-volumes:
-  postgres_data:

@@ -770,16 +770,18 @@ User                 PullSense Dashboard       GitHub              FastAPI
 # Pseudocode for posting review to GitHub
 async def post_review(review: Review, findings: list[Finding]):
     token = await generate_installation_token(installation_id)
-    
+
     comments = []
     for finding in findings:
         if finding.file_path and finding.start_line:
-            comments.append({
-                "path": finding.file_path,
-                "line": finding.start_line,
-                "body": format_inline_comment(finding)  # 🔴/🟡/🟢 + description
-            })
-    
+            comments.append(
+                {
+                    "path": finding.file_path,
+                    "line": finding.start_line,
+                    "body": format_inline_comment(finding),  # 🔴/🟡/🟢 + description
+                }
+            )
+
     # POST /repos/{owner}/{repo}/pulls/{pr_number}/reviews
     await github_client.create_review(
         owner=repo.owner,
@@ -787,7 +789,7 @@ async def post_review(review: Review, findings: list[Finding]):
         pr_number=pr.pr_number,
         event="COMMENT",  # Never APPROVE or REQUEST_CHANGES
         body=format_review_summary(review),
-        comments=comments
+        comments=comments,
     )
 ```
 
@@ -835,10 +837,10 @@ Celery Worker           ADK Runner          Agents                    External
 AGENT_CONFIGS = {
     "triage": {
         "model": "gemini-2.5-flash",
-        "temperature": 0.1,        # Low for classification
+        "temperature": 0.1,  # Low for classification
         "max_output_tokens": 1024,
         "system_prompt": "prompts/triage.md",
-        "tools": [],               # No tools needed
+        "tools": [],  # No tools needed
     },
     "security": {
         "model": "gemini-2.5-flash",
@@ -985,12 +987,13 @@ CELERY_TASK_ROUTES = {
     "workers.cleanup_tasks.cleanup_vectors": {"queue": "cleanup"},
 }
 
+
 # Review pipeline as Celery chain
 def trigger_review(webhook_event_id: str):
     pipeline = chain(
         validate_and_prepare.s(webhook_event_id),
         run_triage.s(),
-        run_parallel_agents.s(),       # Uses group() internally
+        run_parallel_agents.s(),  # Uses group() internally
         run_codebase_context.s(),
         run_aggregator.s(),
         post_github_review.s(),
@@ -1228,6 +1231,7 @@ CLERK_SECRET_KEY=sk_test_...
 ```python
 # server/config.py
 from pydantic_settings import BaseSettings
+
 
 class Settings(BaseSettings):
     # App
