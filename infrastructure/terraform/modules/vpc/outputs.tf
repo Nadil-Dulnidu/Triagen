@@ -22,3 +22,8 @@ output "connector_name" {
   description = "Serverless VPC Access Connector Name"
   value       = google_vpc_access_connector.connector.name
 }
+
+output "psa_connection" {
+  description = "Private Service Access peering connection"
+  value       = google_service_networking_connection.private_vpc_connection
+}

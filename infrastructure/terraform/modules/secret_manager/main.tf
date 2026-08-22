@@ -7,11 +7,20 @@ locals {
     "pinecone_api_key"             = var.pinecone_api_key
     "database_url"                 = var.database_url
   }
+
+  secret_keys = toset([
+    "github_app_private_key",
+    "github_webhook_secret",
+    "clerk_secret_key",
+    "clerk_webhook_signing_secret",
+    "pinecone_api_key",
+    "database_url",
+  ])
 }
 
 resource "google_secret_manager_secret" "secret" {
-  for_each  = local.secrets
-  secret_id = "${var.project_name}-${var.environment}-${replace(each.key, "_", "-")}"
+  for_each  = local.secret_keys
+  secret_id = "${lower(var.project_name)}-${lower(var.environment)}-${replace(each.key, "_", "-")}"
   project   = var.project_id
 
   replication {
@@ -20,7 +29,7 @@ resource "google_secret_manager_secret" "secret" {
 }
 
 resource "google_secret_manager_secret_version" "secret_version" {
-  for_each    = { for k, v in local.secrets : k => v if v != "" }
+  for_each    = local.secret_keys
   secret      = google_secret_manager_secret.secret[each.key].id
-  secret_data = each.value
+  secret_data = local.secrets[each.key]
 }

@@ -8,7 +8,7 @@ resource "random_id" "db_suffix" {
 }
 
 resource "google_sql_database_instance" "postgres" {
-  name             = "${var.project_name}-${var.environment}-pg-${random_id.db_suffix.hex}"
+  name             = "${lower(var.project_name)}-${lower(var.environment)}-pg-${random_id.db_suffix.hex}"
   database_version = "POSTGRES_16"
   region           = var.region
   project          = var.project_id
@@ -17,6 +17,7 @@ resource "google_sql_database_instance" "postgres" {
 
   settings {
     tier              = var.tier
+    edition           = "ENTERPRISE"
     availability_type = var.availability_type
     disk_type         = "PD_SSD"
     disk_size         = var.disk_size
@@ -45,11 +46,6 @@ resource "google_sql_database_instance" "postgres" {
     database_flags {
       name  = "max_connections"
       value = "200"
-    }
-
-    database_flags {
-      name  = "shared_buffers"
-      value = var.shared_buffers
     }
   }
 

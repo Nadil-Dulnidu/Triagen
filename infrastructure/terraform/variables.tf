@@ -6,7 +6,7 @@ variable "project_id" {
 variable "project_name" {
   description = "Project name prefix"
   type        = string
-  default     = "pullsense"
+  default     = "Triagen"
 }
 
 variable "environment" {
@@ -88,11 +88,11 @@ variable "api_min_instances" {
 variable "api_image" {
   description = "Initial Docker image for API/Worker"
   type        = string
-  default     = "us-central1-docker.pkg.dev/pullsense/pullsense-repo/pullsense-api:latest"
+  default     = "us-docker.pkg.dev/cloudrun/container/hello"
 }
 
 variable "client_image" {
   description = "Initial Docker image for Next.js Client"
   type        = string
-  default     = "us-central1-docker.pkg.dev/pullsense/pullsense-repo/pullsense-client:latest"
+  default     = "us-docker.pkg.dev/cloudrun/container/hello"
 }

@@ -1,11 +1,11 @@
 resource "google_compute_network" "vpc_network" {
-  name                    = "${var.project_name}-${var.environment}-vpc"
+  name                    = "${lower(var.project_name)}-${lower(var.environment)}-vpc"
   auto_create_subnetworks = false
   project                 = var.project_id
 }
 
 resource "google_compute_subnetwork" "subnet" {
-  name          = "${var.project_name}-${var.environment}-subnet"
+  name          = "${lower(var.project_name)}-${lower(var.environment)}-subnet"
   ip_cidr_range = var.subnet_cidr
   region        = var.region
   network       = google_compute_network.vpc_network.id
@@ -16,7 +16,7 @@ resource "google_compute_subnetwork" "subnet" {
 
 # Private Service Access for Cloud SQL & Redis
 resource "google_compute_global_address" "private_ip_alloc" {
-  name          = "${var.project_name}-${var.environment}-psa-ip"
+  name          = "${lower(var.project_name)}-${lower(var.environment)}-psa-ip"
   purpose       = "VPC_PEERING"
   address_type  = "INTERNAL"
   prefix_length = 16
@@ -32,7 +32,7 @@ resource "google_service_networking_connection" "private_vpc_connection" {
 
 # Serverless VPC Access Connector for Cloud Run
 resource "google_vpc_access_connector" "connector" {
-  name          = "${var.environment}-vpc-conn"
+  name          = "${lower(var.environment)}-vpc-conn"
   region        = var.region
   project       = var.project_id
   ip_cidr_range = var.connector_cidr
@@ -47,14 +47,14 @@ resource "google_vpc_access_connector" "connector" {
 
 # Cloud Router & NAT for Outbound Internet
 resource "google_compute_router" "router" {
-  name    = "${var.project_name}-${var.environment}-router"
+  name    = "${lower(var.project_name)}-${lower(var.environment)}-router"
   region  = var.region
   network = google_compute_network.vpc_network.id
   project = var.project_id
 }
 
 resource "google_compute_router_nat" "nat" {
-  name                               = "${var.project_name}-${var.environment}-nat"
+  name                               = "${lower(var.project_name)}-${lower(var.environment)}-nat"
   router                             = google_compute_router.router.name
   region                             = var.region
   project                            = var.project_id

@@ -8,6 +8,28 @@ provider "google-beta" {
   region  = var.region
 }
 
+locals {
+  gcp_services = [
+    "compute.googleapis.com",
+    "vpcaccess.googleapis.com",
+    "servicenetworking.googleapis.com",
+    "sqladmin.googleapis.com",
+    "redis.googleapis.com",
+    "secretmanager.googleapis.com",
+    "run.googleapis.com",
+    "artifactregistry.googleapis.com",
+    "iam.googleapis.com",
+    "aiplatform.googleapis.com",
+  ]
+}
+
+resource "google_project_service" "services" {
+  for_each           = toset(local.gcp_services)
+  project            = var.project_id
+  service            = each.key
+  disable_on_destroy = false
+}
+
 # 1. VPC & Networking
 module "vpc" {
   source       = "./modules/vpc"
@@ -17,6 +39,8 @@ module "vpc" {
   region       = var.region
   subnet_cidr  = "10.0.0.0/20"
   connector_cidr = "10.8.0.0/28"
+
+  depends_on = [google_project_service.services]
 }
 
 # 2. Cloud SQL PostgreSQL 16
@@ -27,11 +51,13 @@ module "cloud_sql" {
   environment         = var.environment
   region              = var.region
   network_id          = module.vpc.network_id
-  psa_connection      = module.vpc.network_id
+  psa_connection      = module.vpc.psa_connection
   tier                = var.db_tier
   availability_type   = "ZONAL"
   disk_size           = 20
   deletion_protection = var.deletion_protection
+
+  depends_on = [google_project_service.services, module.vpc]
 }
 
 # 3. Memorystore Redis 7
@@ -42,9 +68,11 @@ module "memorystore" {
   environment    = var.environment
   region         = var.region
   network_id     = module.vpc.network_id
-  psa_connection = module.vpc.network_id
+  psa_connection = module.vpc.psa_connection
   tier           = "BASIC"
   memory_size_gb = 1
+
+  depends_on = [google_project_service.services, module.vpc]
 }
 
 # 4. Artifact Registry
@@ -54,6 +82,8 @@ module "artifact_registry" {
   project_name = var.project_name
   environment  = var.environment
   region       = var.region
+
+  depends_on = [google_project_service.services]
 }
 
 # 5. Secret Manager
@@ -68,6 +98,8 @@ module "secret_manager" {
   clerk_webhook_signing_secret = var.clerk_webhook_signing_secret
   pinecone_api_key             = var.pinecone_api_key
   database_url                 = module.cloud_sql.database_url
+
+  depends_on = [google_project_service.services]
 }
 
 # 6. IAM & Workload Identity
@@ -78,6 +110,8 @@ module "iam" {
   environment              = var.environment
   enable_workload_identity = true
   github_repo              = var.github_repo
+
+  depends_on = [google_project_service.services]
 }
 
 # 7. Cloud Run Services
@@ -100,4 +134,6 @@ module "cloud_run" {
   api_min_instances     = var.api_min_instances
   worker_min_instances  = 1
   client_min_instances  = 0
+
+  depends_on = [google_project_service.services]
 }

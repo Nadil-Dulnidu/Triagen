@@ -1,9 +1,18 @@
 # 1. FastAPI Backend API Service
 resource "google_cloud_run_v2_service" "api" {
-  name     = "${var.project_name}-${var.environment}-api"
-  location = var.region
-  project  = var.project_id
-  ingress  = "INGRESS_TRAFFIC_ALL"
+  name                = "${lower(var.project_name)}-${lower(var.environment)}-api"
+  location            = var.region
+  project             = var.project_id
+  ingress             = "INGRESS_TRAFFIC_ALL"
+  deletion_protection = false
+
+  lifecycle {
+    ignore_changes = [
+      template[0].containers[0].image,
+      client,
+      client_version,
+    ]
+  }
 
   template {
     service_account = var.backend_sa_email
@@ -111,25 +120,6 @@ resource "google_cloud_run_v2_service" "api" {
           }
         }
       }
-
-      startup_probe {
-        http_get {
-          path = "/health"
-          port = 8000
-        }
-        initial_delay_seconds = 5
-        period_seconds        = 10
-        failure_threshold     = 3
-      }
-
-      liveness_probe {
-        http_get {
-          path = "/health"
-          port = 8000
-        }
-        period_seconds    = 15
-        failure_threshold = 3
-      }
     }
   }
 }
@@ -145,10 +135,19 @@ resource "google_cloud_run_service_iam_member" "api_public" {
 
 # 2. Celery Review Worker Service
 resource "google_cloud_run_v2_service" "worker" {
-  name     = "${var.project_name}-${var.environment}-worker"
-  location = var.region
-  project  = var.project_id
-  ingress  = "INGRESS_TRAFFIC_INTERNAL_ONLY"
+  name                = "${lower(var.project_name)}-${lower(var.environment)}-worker"
+  location            = var.region
+  project             = var.project_id
+  ingress             = "INGRESS_TRAFFIC_INTERNAL_ONLY"
+  deletion_protection = false
+
+  lifecycle {
+    ignore_changes = [
+      template[0].containers[0].image,
+      client,
+      client_version,
+    ]
+  }
 
   template {
     service_account = var.backend_sa_email
@@ -164,8 +163,7 @@ resource "google_cloud_run_v2_service" "worker" {
     }
 
     containers {
-      image   = var.api_image
-      command = ["celery", "-A", "server.workers.celery_app", "worker", "--loglevel=INFO", "-c", "4"]
+      image = var.api_image
 
       resources {
         limits = {
@@ -231,10 +229,19 @@ resource "google_cloud_run_v2_service" "worker" {
 
 # 3. Next.js 15 Frontend Client Service
 resource "google_cloud_run_v2_service" "client" {
-  name     = "${var.project_name}-${var.environment}-client"
-  location = var.region
-  project  = var.project_id
-  ingress  = "INGRESS_TRAFFIC_ALL"
+  name                = "${lower(var.project_name)}-${lower(var.environment)}-client"
+  location            = var.region
+  project             = var.project_id
+  ingress             = "INGRESS_TRAFFIC_ALL"
+  deletion_protection = false
+
+  lifecycle {
+    ignore_changes = [
+      template[0].containers[0].image,
+      client,
+      client_version,
+    ]
+  }
 
   template {
     service_account = var.frontend_sa_email
