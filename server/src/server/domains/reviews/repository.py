@@ -235,6 +235,7 @@ class RepositoryEntityRepository:
             )
             self._session.add(repo)
         else:
+            repo.organization_id = organization_id
             repo.full_name = full_name
             repo.name = name
             repo.default_branch = default_branch

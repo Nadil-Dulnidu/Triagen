@@ -126,10 +126,27 @@ class GitHubClient:
         )
 
     async def list_installation_repositories(self) -> list[dict[str, Any]]:
-        """List repositories accessible to this installation."""
-        async with httpx.AsyncClient(base_url=GITHUB_API_BASE) as client:
-            headers = await self._get_headers()
-            response = await client.get("/installation/repositories", headers=headers)
-            response.raise_for_status()
-            data = response.json()
-            return data.get("repositories", [])
+        """List all repositories accessible to this installation with pagination."""
+        headers = await self._get_headers()
+        all_repos: list[dict[str, Any]] = []
+        page = 1
+        per_page = 100
+
+        async with httpx.AsyncClient(base_url=GITHUB_API_BASE, timeout=30.0) as client:
+            while True:
+                response = await client.get(
+                    "/installation/repositories",
+                    headers=headers,
+                    params={"per_page": per_page, "page": page},
+                )
+                response.raise_for_status()
+                data = response.json()
+                repos = data.get("repositories", [])
+                all_repos.extend(repos)
+
+                total_count = data.get("total_count", len(all_repos))
+                if len(all_repos) >= total_count or not repos or len(repos) < per_page:
+                    break
+                page += 1
+
+        return all_repos

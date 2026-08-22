@@ -95,6 +95,7 @@ class RepositoryService:
             installation_ids.append(installation_id)
         else:
             # Check organization record if present
+            org = None
             with contextlib.suppress(Exception):
                 from sqlalchemy import select
 
@@ -114,6 +115,10 @@ class RepositoryService:
                 for inst in installations:
                     if "id" in inst:
                         installation_ids.append(inst["id"])
+                        # Auto-link the discovered installation ID to this organization if unlinked
+                        if org and not org.github_installation_id:
+                            org.github_installation_id = str(inst["id"])
+                            await self.session.commit()
 
         all_gh_repos: list[dict[str, Any]] = []
         for inst_id in installation_ids:

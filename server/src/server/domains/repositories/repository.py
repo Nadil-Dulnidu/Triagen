@@ -18,13 +18,20 @@ class RepositoryManagerRepository:
         self.session = session
 
     async def list_by_org(
-        self, organization_id: str, is_active: bool | None = None
+        self, organization_id: str | list[str], is_active: bool | None = None
     ) -> list[Repository]:
-        stmt = (
-            select(Repository)
-            .where(Repository.organization_id == organization_id)
-            .options(selectinload(Repository.config))
-        )
+        if isinstance(organization_id, list):
+            stmt = (
+                select(Repository)
+                .where(Repository.organization_id.in_(organization_id))
+                .options(selectinload(Repository.config))
+            )
+        else:
+            stmt = (
+                select(Repository)
+                .where(Repository.organization_id == organization_id)
+                .options(selectinload(Repository.config))
+            )
         if is_active is not None:
             stmt = stmt.where(Repository.is_active == is_active)
         stmt = stmt.order_by(Repository.name.asc())
@@ -61,6 +68,7 @@ class RepositoryManagerRepository:
     ) -> Repository:
         repo = await self.get_by_github_id(github_repo_id)
         if repo:
+            repo.organization_id = organization_id
             repo.full_name = full_name
             repo.name = name
             repo.default_branch = default_branch

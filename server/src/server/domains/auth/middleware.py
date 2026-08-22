@@ -101,7 +101,11 @@ async def get_auth_context(
             db = request.state.db if hasattr(request.state, "db") else None
             dev_user_id = "00000000-0000-0000-0000-000000000001"
             dev_org_id = "00000000-0000-0000-0000-000000000001"
+            dev_clerk_org_id = "org_dev_local"
             if db is not None:
+                from sqlalchemy import select
+
+                from server.domains.auth.models import Organization
                 from server.domains.auth.repository import OrganizationRepository, UserRepository
 
                 user_repo = UserRepository(db)
@@ -117,17 +121,31 @@ async def get_auth_context(
                         )
                     except Exception:
                         dev_user = await user_repo.get_by_clerk_id("user_dev_local")
-                dev_org = await org_repo.get_by_clerk_id("org_dev_local")
-                if not dev_org:
-                    try:
-                        dev_org = await org_repo.create(
-                            clerk_org_id="org_dev_local",
-                            name="Default Organization",
-                        )
-                    except Exception:
-                        dev_org = await org_repo.get_by_clerk_id("org_dev_local")
-                if dev_org:
-                    dev_org_id = dev_org.id
+
+                # Prefer an organization that has github_installation_id or repos
+                res_inst = await db.execute(
+                    select(Organization)
+                    .where(Organization.github_installation_id.isnot(None))
+                    .order_by(Organization.created_at.asc())
+                )
+                existing_inst_org = res_inst.scalars().first()
+                if existing_inst_org:
+                    dev_org_id = existing_inst_org.id
+                    dev_clerk_org_id = existing_inst_org.clerk_org_id
+                else:
+                    dev_org = await org_repo.get_by_clerk_id("org_dev_local")
+                    if not dev_org:
+                        try:
+                            dev_org = await org_repo.create(
+                                clerk_org_id="org_dev_local",
+                                name="Default Organization",
+                            )
+                        except Exception:
+                            dev_org = await org_repo.get_by_clerk_id("org_dev_local")
+                    if dev_org:
+                        dev_org_id = dev_org.id
+                        dev_clerk_org_id = dev_org.clerk_org_id
+
                 if dev_user:
                     dev_user_id = dev_user.id
                 with contextlib.suppress(Exception):
@@ -136,7 +154,7 @@ async def get_auth_context(
                 user_id=dev_user_id,
                 clerk_user_id="user_dev_local",
                 organization_id=dev_org_id,
-                clerk_org_id="org_dev_local",
+                clerk_org_id=dev_clerk_org_id,
                 org_role="admin",
             )
         raise HTTPException(
@@ -203,7 +221,43 @@ async def get_auth_context(
             user_id = user.id
 
         org_repo = OrganizationRepository(db)
-        org = await org_repo.get_by_clerk_id(target_clerk_org_id)
+        org = None
+
+        if clerk_org_id:
+            org = await org_repo.get_by_clerk_id(clerk_org_id)
+            if org:
+                target_clerk_org_id = org.clerk_org_id
+        else:
+            # If no explicit org_id in token claims, check if user belongs to an org
+            if user:
+                from sqlalchemy import select
+
+                from server.domains.auth.models import Organization, OrganizationMembership
+
+                stmt_mem = (
+                    select(Organization)
+                    .join(
+                        OrganizationMembership,
+                        OrganizationMembership.organization_id == Organization.id,
+                    )
+                    .where(OrganizationMembership.user_id == user.id)
+                )
+                res_mem = await db.execute(stmt_mem)
+                user_orgs = list(res_mem.scalars().all())
+
+                # Prefer an organization that has a github_installation_id
+                for o in user_orgs:
+                    if o.github_installation_id:
+                        org = o
+                        target_clerk_org_id = o.clerk_org_id
+                        break
+                if not org and user_orgs:
+                    org = user_orgs[0]
+                    target_clerk_org_id = org.clerk_org_id
+
+            if not org:
+                org = await org_repo.get_by_clerk_id(target_clerk_org_id)
+
         if not org:
             org_name = claims.get("org_name") or (
                 f"{user.display_name or user.username or clerk_user_id}'s Workspace"
@@ -227,6 +281,17 @@ async def get_auth_context(
 
         if org:
             organization_id = org.id
+            if user:
+                # Ensure user membership exists for this org
+                mem_repo = MembershipRepository(db)
+                existing_mem = await mem_repo.get_membership(user.id, org.id)
+                if not existing_mem:
+                    with contextlib.suppress(Exception):
+                        await mem_repo.create(
+                            user_id=user.id,
+                            organization_id=org.id,
+                            role=org_role or "admin",
+                        )
 
         # Commit newly provisioned records immediately
         with contextlib.suppress(Exception):

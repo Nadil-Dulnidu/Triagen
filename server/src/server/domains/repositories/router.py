@@ -171,6 +171,15 @@ async def connect_repositories(
     available_repos = await service.list_available_github_repositories(org_id)
     repo_map = {r.github_repo_id: r for r in available_repos}
 
+    # Ensure organization has github_installation_id linked
+    from server.domains.auth.models import Organization
+    org = await db.get(Organization, org_id)
+    if org and not org.github_installation_id:
+        from server.domains.github.auth import get_app_installations
+        installs = await get_app_installations()
+        if installs and "id" in installs[0]:
+            org.github_installation_id = str(installs[0]["id"])
+
     connected: list[RepositoryResponse] = []
 
     for github_repo_id in req.repository_ids:

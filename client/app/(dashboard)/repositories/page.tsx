@@ -21,6 +21,8 @@ import {
   RefreshCwIcon,
   AlertCircleIcon,
   CheckCircle2Icon,
+  LockIcon,
+  GlobeIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,11 +36,12 @@ export default function RepositoriesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [connectSearchQuery, setConnectSearchQuery] = useState("");
   const [selectedRepoForConfig, setSelectedRepoForConfig] = useState<RepositoryResponse | null>(null);
   const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
   const [selectedGithubIds, setSelectedGithubIds] = useState<number[]>([]);
-  const githubAppName = process.env.NEXT_PUBLIC_GITHUB_APP_NAME || "triagen-ai";
+  const githubAppName = process.env.NEXT_PUBLIC_GITHUB_APP_NAME || "Triagen-App";
 
   useEffect(() => {
     let isMounted = true;
@@ -230,7 +233,7 @@ export default function RepositoriesPage() {
               className="group flex flex-col justify-between gap-4 rounded-xl border border-border/70 bg-card/60 p-5 transition-all hover:border-violet-500/40 hover:bg-card/90 md:flex-row md:items-center"
             >
               <div className="space-y-2">
-                <div className="flex items-center gap-2.5">
+                <div className="flex flex-wrap items-center gap-2.5">
                   <FolderGit2Icon className="h-5 w-5 text-violet-400" />
                   <h3 className="font-semibold text-foreground text-base font-mono">
                     {repo.full_name}
@@ -239,6 +242,17 @@ export default function RepositoriesPage() {
                     <GitBranchIcon className="h-3 w-3 mr-1" />
                     {repo.default_branch}
                   </Badge>
+                  {repo.private ? (
+                    <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/30 text-[11px] gap-1">
+                      <LockIcon className="h-3 w-3" />
+                      Private
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="bg-sky-500/10 text-sky-400 border-sky-500/30 text-[11px] gap-1">
+                      <GlobeIcon className="h-3 w-3" />
+                      Public
+                    </Badge>
+                  )}
                   {repo.is_active && (
                     <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30 text-[11px]">
                       Active
@@ -448,7 +462,7 @@ export default function RepositoriesPage() {
                     </div>
                     <div className="flex items-center gap-1.5 text-emerald-400">
                       <CheckCircle2Icon className="h-3.5 w-3.5" />
-                      <span>Contents: Read-only</span>
+                      <span>Contents: Read &amp; Write (for private repos)</span>
                     </div>
                     <div className="flex items-center gap-1.5 text-emerald-400">
                       <CheckCircle2Icon className="h-3.5 w-3.5" />
@@ -634,13 +648,18 @@ export default function RepositoriesPage() {
       {/* Connect Repositories Modal */}
       {isConnectModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="relative w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-2xl space-y-5">
+          <div className="relative w-full max-w-xl rounded-xl border border-border bg-card p-6 shadow-2xl space-y-5">
             <div className="flex items-center justify-between border-b border-border/80 pb-3">
               <div className="flex items-center gap-2">
                 <SparklesIcon className="h-5 w-5 text-violet-400" />
-                <h3 className="font-semibold text-foreground text-sm">
-                  Connect GitHub Repositories
-                </h3>
+                <div>
+                  <h3 className="font-semibold text-foreground text-sm">
+                    Connect GitHub Repositories
+                  </h3>
+                  <p className="text-[11px] text-muted-foreground">
+                    {availableGithubRepos.length} repositories available ({availableGithubRepos.filter(r => !r.private).length} Public, {availableGithubRepos.filter(r => r.private).length} Private)
+                  </p>
+                </div>
               </div>
               <Button
                 variant="ghost"
@@ -652,46 +671,74 @@ export default function RepositoriesPage() {
               </Button>
             </div>
 
-            <p className="text-xs text-muted-foreground">
-              Select repositories from your GitHub App installation to enable automated code reviews.
-            </p>
+            <div className="relative">
+              <SearchIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Filter repositories by name..."
+                value={connectSearchQuery}
+                onChange={(e) => setConnectSearchQuery(e.target.value)}
+                className="pl-9 bg-background/50 border-border/80 text-xs"
+              />
+            </div>
 
             {availableGithubRepos.length > 0 ? (
-              <div className="divide-y divide-border/60 rounded-lg border border-border/80 bg-background/50 text-xs max-h-60 overflow-y-auto">
-                {availableGithubRepos.map((gh) => {
-                  const isSelected = selectedGithubIds.includes(gh.github_repo_id);
-                  return (
-                    <div
-                      key={gh.github_repo_id}
-                      onClick={() => {
-                        if (isSelected) {
-                          setSelectedGithubIds(
-                            selectedGithubIds.filter((id) => id !== gh.github_repo_id)
-                          );
-                        } else {
-                          setSelectedGithubIds([...selectedGithubIds, gh.github_repo_id]);
-                        }
-                      }}
-                      className={`flex items-center justify-between p-3 cursor-pointer transition-colors ${
-                        isSelected ? "bg-violet-950/20" : "hover:bg-accent/40"
-                      }`}
-                    >
-                      <div>
-                        <p className="font-mono font-medium text-foreground">{gh.full_name}</p>
-                        <span className="text-[11px] text-muted-foreground">
-                          {gh.language || "Repository"}
-                        </span>
-                      </div>
-                      <Button
-                        variant={isSelected ? "secondary" : "outline"}
-                        size="sm"
-                        className="text-xs h-7"
+              <div className="divide-y divide-border/60 rounded-lg border border-border/80 bg-background/50 text-xs max-h-72 overflow-y-auto">
+                {availableGithubRepos
+                  .filter((gh) =>
+                    gh.full_name.toLowerCase().includes(connectSearchQuery.toLowerCase())
+                  )
+                  .map((gh) => {
+                    const isSelected = selectedGithubIds.includes(gh.github_repo_id);
+                    return (
+                      <div
+                        key={gh.github_repo_id}
+                        onClick={() => {
+                          if (isSelected) {
+                            setSelectedGithubIds(
+                              selectedGithubIds.filter((id) => id !== gh.github_repo_id)
+                            );
+                          } else {
+                            setSelectedGithubIds([...selectedGithubIds, gh.github_repo_id]);
+                          }
+                        }}
+                        className={`flex items-center justify-between p-3 cursor-pointer transition-colors ${
+                          isSelected ? "bg-violet-950/20" : "hover:bg-accent/40"
+                        }`}
                       >
-                        {isSelected ? "Selected" : "Select"}
-                      </Button>
-                    </div>
-                  );
-                })}
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-mono font-medium text-foreground">{gh.full_name}</p>
+                            {gh.private ? (
+                              <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/30 text-[10px] gap-1 px-1.5 py-0">
+                                <LockIcon className="h-2.5 w-2.5" />
+                                Private
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="bg-sky-500/10 text-sky-400 border-sky-500/30 text-[10px] gap-1 px-1.5 py-0">
+                                <GlobeIcon className="h-2.5 w-2.5" />
+                                Public
+                              </Badge>
+                            )}
+                            {gh.is_connected && (
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-emerald-500/15 text-emerald-400 border-emerald-500/30">
+                                Connected
+                              </Badge>
+                            )}
+                          </div>
+                          <span className="text-[11px] text-muted-foreground font-mono">
+                            {gh.language || "Multi-language"} • {gh.default_branch}
+                          </span>
+                        </div>
+                        <Button
+                          variant={isSelected ? "secondary" : "outline"}
+                          size="sm"
+                          className="text-xs h-7 ml-3 shrink-0"
+                        >
+                          {isSelected ? "Selected" : "Select"}
+                        </Button>
+                      </div>
+                    );
+                  })}
               </div>
             ) : (
               <div className="rounded-lg border border-dashed border-border p-6 text-center space-y-2">
@@ -716,23 +763,28 @@ export default function RepositoriesPage() {
               </div>
             )}
 
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-border/80">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsConnectModalOpen(false)}
-                className="text-xs"
-              >
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleConnectSelected}
-                disabled={selectedGithubIds.length === 0}
-                className="bg-violet-600 hover:bg-violet-700 text-white text-xs"
-              >
-                Connect {selectedGithubIds.length} Repositories
-              </Button>
+            <div className="flex items-center justify-between pt-3 border-t border-border/80">
+              <span className="text-xs text-muted-foreground font-mono">
+                {selectedGithubIds.length} selected
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsConnectModalOpen(false)}
+                  className="text-xs"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleConnectSelected}
+                  disabled={selectedGithubIds.length === 0}
+                  className="bg-violet-600 hover:bg-violet-700 text-white text-xs"
+                >
+                  Connect {selectedGithubIds.length} Repositories
+                </Button>
+              </div>
             </div>
           </div>
         </div>

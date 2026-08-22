@@ -55,6 +55,7 @@ class RepositoryResponse(BaseModel):
     name: str
     default_branch: str = "main"
     language: str | None = None
+    private: bool = False
     is_active: bool = True
     last_review_at: datetime | None = None
     created_at: datetime

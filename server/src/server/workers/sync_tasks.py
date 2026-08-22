@@ -76,17 +76,20 @@ async def _execute_installation_sync(webhook_event_id: str) -> dict[str, Any]:
             org.github_installation_id = str(installation_id)
             await session.flush()
 
-        org_id = org.id
+        # Link installation ID to organization
+        if installation_id and org and not org.github_installation_id:
+            org.github_installation_id = str(installation_id)
+            await session.flush()
 
-        # Handle added repos
-        repos_added = payload.get("repositories_added", []) or payload.get("repositories", [])
-        for repo_info in repos_added:
-            await repo_repo.create_or_update(
-                organization_id=org_id,
-                github_repo_id=repo_info.get("id"),
-                full_name=repo_info.get("full_name"),
-                name=repo_info.get("name"),
-            )
+        # Handle repositories removed from GitHub App
+        repos_removed = payload.get("repositories_removed", [])
+        if repos_removed:
+            for repo_info in repos_removed:
+                gh_id = repo_info.get("id")
+                if gh_id:
+                    existing_repo = await repo_repo.get_by_github_id(gh_id)
+                    if existing_repo and existing_repo.organization_id == org.id:
+                        await session.delete(existing_repo)
 
         webhook_event.processing_status = "completed"
         await session.commit()
@@ -94,7 +97,7 @@ async def _execute_installation_sync(webhook_event_id: str) -> dict[str, Any]:
             "github_installation_synced",
             installation_id=installation_id,
             action=action,
-            repos_count=len(repos_added),
+            removed_count=len(repos_removed),
         )
 
-        return {"status": "success", "synced_count": len(repos_added)}
+        return {"status": "success", "installation_id": installation_id}

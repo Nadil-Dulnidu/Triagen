@@ -64,6 +64,7 @@ export interface RepositoryResponse {
   name: string;
   default_branch: string;
   language?: string | null;
+  private?: boolean;
   is_active: boolean;
   last_review_at?: string | null;
   created_at: string;
