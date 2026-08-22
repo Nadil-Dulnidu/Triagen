@@ -99,7 +99,7 @@ resource "google_cloud_run_v2_service" "api" {
       }
       env {
         name  = "PINECONE_INDEX_NAME"
-        value = "pullsense"
+        value = "triagen"
       }
       env {
         name  = "RATE_LIMIT_REVIEWS_PER_HOUR"
@@ -262,7 +262,7 @@ resource "google_cloud_run_v2_service" "worker" {
       }
       env {
         name  = "PINECONE_INDEX_NAME"
-        value = "pullsense"
+        value = "triagen"
       }
       env {
         name  = "RATE_LIMIT_REVIEWS_PER_HOUR"

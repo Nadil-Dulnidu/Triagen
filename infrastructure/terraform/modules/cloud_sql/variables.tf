@@ -6,7 +6,7 @@ variable "project_id" {
 variable "project_name" {
   description = "Application project prefix"
   type        = string
-  default     = "pullsense"
+  default     = "triagen"
 }
 
 variable "environment" {
@@ -57,13 +57,13 @@ variable "shared_buffers" {
 variable "database_name" {
   description = "Default database name"
   type        = string
-  default     = "pullsense"
+  default     = "triagen"
 }
 
 variable "db_user" {
   description = "Database username"
   type        = string
-  default     = "pullsense_app"
+  default     = "triagen_app"
 }
 
 variable "deletion_protection" {

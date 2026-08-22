@@ -6,7 +6,7 @@ variable "project_id" {
 variable "project_name" {
   description = "Project name prefix"
   type        = string
-  default     = "pullsense"
+  default     = "triagen"
 }
 
 variable "region" {
@@ -18,7 +18,7 @@ variable "region" {
 variable "github_repo" {
   description = "GitHub repository for Workload Identity"
   type        = string
-  default     = "Nadil-Dulnidu/PullSense-Web"
+  default     = "Nadil-Dulnidu/Triagen"
 }
 
 variable "github_app_id" {
@@ -64,11 +64,11 @@ variable "pinecone_api_key" {
 variable "api_image" {
   description = "Initial Docker image for API/Worker"
   type        = string
-  default     = "us-central1-docker.pkg.dev/pullsense-production/pullsense-production-repo/pullsense-api:latest"
+  default     = "us-central1-docker.pkg.dev/triagen-production/triagen-production-repo/triagen-api:latest"
 }
 
 variable "client_image" {
   description = "Initial Docker image for Next.js Client"
   type        = string
-  default     = "us-central1-docker.pkg.dev/pullsense-production/pullsense-production-repo/pullsense-client:latest"
+  default     = "us-central1-docker.pkg.dev/triagen-production/triagen-production-repo/triagen-client:latest"
 }

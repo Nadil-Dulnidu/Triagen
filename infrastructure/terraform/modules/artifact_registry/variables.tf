@@ -6,7 +6,7 @@ variable "project_id" {
 variable "project_name" {
   description = "Application project prefix"
   type        = string
-  default     = "pullsense"
+  default     = "triagen"
 }
 
 variable "environment" {

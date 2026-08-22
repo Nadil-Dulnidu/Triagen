@@ -22,3 +22,15 @@ output "github_cd_sa_email" {
   description = "GitHub Actions Service Account Email"
   value       = module.iam.github_cd_sa_email
 }
+
+output "database_password" {
+  description = "Cloud SQL application user password"
+  value       = module.cloud_sql.db_password
+  sensitive   = true
+}
+
+output "database_url" {
+  description = "Cloud SQL database connection string"
+  value       = module.cloud_sql.database_url
+  sensitive   = true
+}

@@ -22,7 +22,7 @@ terraform {
 
   # Production remote state bucket
   # backend "gcs" {
-  #   bucket = "pullsense-production-tf-state"
+  #   bucket = "triagen-production-tf-state"
   #   prefix = "terraform/state"
   # }
 }
