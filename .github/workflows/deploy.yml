@@ -43,15 +43,22 @@ jobs:
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
 
-      # 1. Build & Push Server Container (FastAPI & Celery)
-      - name: Build and Push Backend Image
+      # 1. Build & Push Server Containers (FastAPI API & Celery Worker)
+      - name: Build and Push Backend Images
         run: |
-          IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/pullsense-api:${{ github.sha }}"
-          LATEST_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/pullsense-api:latest"
+          API_IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/pullsense-api:${{ github.sha }}"
+          API_LATEST="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/pullsense-api:latest"
           
-          docker build -t $IMAGE_URI -t $LATEST_URI ./server
-          docker push $IMAGE_URI
-          docker push $LATEST_URI
+          WORKER_IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/pullsense-worker:${{ github.sha }}"
+          WORKER_LATEST="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/pullsense-worker:latest"
+          
+          docker build -t $API_IMAGE -t $API_LATEST ./server
+          docker push $API_IMAGE
+          docker push $API_LATEST
+          
+          docker build -f ./server/Dockerfile.worker -t $WORKER_IMAGE -t $WORKER_LATEST ./server
+          docker push $WORKER_IMAGE
+          docker push $WORKER_LATEST
 
       # 2. Build & Push Frontend Container (Next.js 15)
       - name: Build and Push Frontend Image
@@ -79,7 +86,7 @@ jobs:
         with:
           service: triagen-prod-worker
           region: ${{ env.REGION }}
-          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/pullsense-api:${{ github.sha }}
+          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/pullsense-worker:${{ github.sha }}
 
       # 5. Deploy Next.js Frontend Client to Cloud Run
       - name: Deploy Next.js Frontend to Cloud Run
