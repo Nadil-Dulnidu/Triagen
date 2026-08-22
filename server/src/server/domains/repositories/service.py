@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -94,8 +95,9 @@ class RepositoryService:
             installation_ids.append(installation_id)
         else:
             # Check organization record if present
-            try:
+            with contextlib.suppress(Exception):
                 from sqlalchemy import select
+
                 from server.domains.auth.models import Organization
 
                 stmt = select(Organization).where(Organization.id == organization_id)
@@ -103,8 +105,6 @@ class RepositoryService:
                 org = res.scalar_one_or_none()
                 if org and org.github_installation_id:
                     installation_ids.append(int(org.github_installation_id))
-            except Exception:
-                pass
 
             # Fall back to querying GitHub App installations via App JWT
             if not installation_ids:

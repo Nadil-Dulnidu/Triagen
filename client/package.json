@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -27,6 +28,7 @@
   "devDependencies": {
     "@emnapi/core": "^1.11.3",
     "@emnapi/runtime": "^1.11.3",
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

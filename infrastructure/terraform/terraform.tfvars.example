@@ -1,0 +1,14 @@
+project_id                   = "your-gcp-project-id"
+project_name                 = "pullsense"
+environment                  = "prod"
+region                       = "us-central1"
+github_repo                  = "Nadil-Dulnidu/PullSense-Web"
+github_app_id                = "123456"
+github_app_private_key       = "-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----"
+github_webhook_secret        = "your_webhook_secret_here"
+clerk_publishable_key        = "pk_test_..."
+clerk_secret_key             = "sk_test_..."
+clerk_webhook_signing_secret = "whsec_..."
+pinecone_api_key             = "pcsk_..."
+api_min_instances            = 0
+deletion_protection          = false

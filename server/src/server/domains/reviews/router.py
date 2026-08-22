@@ -187,7 +187,10 @@ async def seed_demo_data(
 
     # 3. Memory Rules
     mem_result = await db.execute(
-        select(OrgMemory).where(OrgMemory.organization_id == org.id, OrgMemory.key == "api_docs_required")
+        select(OrgMemory).where(
+            OrgMemory.organization_id == org.id,
+            OrgMemory.key == "api_docs_required",
+        )
     )
     if not mem_result.scalar_one_or_none():
         org_mem = OrgMemory(

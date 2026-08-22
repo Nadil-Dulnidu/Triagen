@@ -64,7 +64,14 @@ def format_inline_comment(finding: ReviewFinding) -> str:
             lang = ""
             if finding.file_path:
                 ext = finding.file_path.split(".")[-1]
-                lang = {"py": "python", "ts": "typescript", "js": "javascript", "go": "go", "rs": "rust"}.get(ext, "")
+                lang_map = {
+                    "py": "python",
+                    "ts": "typescript",
+                    "js": "javascript",
+                    "go": "go",
+                    "rs": "rust",
+                }
+                lang = lang_map.get(ext, "")
             lines.extend(
                 [
                     "",

@@ -3,9 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboardIcon, GitPullRequestIcon, FolderGit2Icon, BarChart3Icon, BrainIcon, SettingsIcon, Building2Icon } from "lucide-react";
-import { OrganizationSwitcher, UserButton, useUser, useOrganization } from "@clerk/nextjs";
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarRail, useSidebar } from "@/components/ui/sidebar";
+import { LayoutDashboardIcon, GitPullRequestIcon, FolderGit2Icon, BarChart3Icon, BrainIcon, SettingsIcon } from "lucide-react";
+import { OrganizationSwitcher, UserButton, useUser } from "@clerk/nextjs";
+import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarRail } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -22,14 +22,10 @@ const navigation = [
 export function DashboardSidebar() {
   const pathname = usePathname();
   const { user } = useUser();
-  const { organization } = useOrganization();
-  const { state } = useSidebar();
 
   const userDisplayName = user?.fullName || user?.username || (user?.firstName ? `${user.firstName} ${user.lastName || ""}`.trim() : null) || "Developer";
 
   const userEmail = user?.primaryEmailAddress?.emailAddress || user?.emailAddresses?.[0]?.emailAddress || "";
-
-  const orgDisplayName = organization?.name || "Personal Workspace";
 
   return (
     <Sidebar collapsible="icon" className="border-r border-border/80 bg-sidebar">

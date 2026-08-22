@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 from typing import Any
 
@@ -129,10 +130,8 @@ async def get_auth_context(
                     dev_org_id = dev_org.id
                 if dev_user:
                     dev_user_id = dev_user.id
-                try:
+                with contextlib.suppress(Exception):
                     await db.commit()
-                except Exception:
-                    pass
             return AuthContext(
                 user_id=dev_user_id,
                 clerk_user_id="user_dev_local",
@@ -230,10 +229,8 @@ async def get_auth_context(
             organization_id = org.id
 
         # Commit newly provisioned records immediately
-        try:
+        with contextlib.suppress(Exception):
             await db.commit()
-        except Exception:
-            pass
 
     return AuthContext(
         user_id=user_id or clerk_user_id,

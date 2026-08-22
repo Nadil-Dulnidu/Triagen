@@ -17,14 +17,11 @@ import {
   LayersIcon,
   CpuIcon,
   TerminalIcon,
-  ClockIcon,
   CheckIcon,
   Building2Icon,
   FileCode2Icon,
   DatabaseIcon,
   ShieldAlertIcon,
-  SparkleIcon,
-  FlameIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

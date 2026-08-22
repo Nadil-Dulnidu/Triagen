@@ -98,6 +98,26 @@ build: build-client ## Build production bundles
 build-client: ## Build production Next.js frontend bundle
 	cd client && npm run build
 
+# ── End-to-End Testing & Utilities ───────────────────────────────────
+test-e2e: ## Run Playwright end-to-end tests
+	cd client && npm run test:e2e
+
+seed-demo: ## Seed realistic PR reviews, repos, and memory rules
+	curl -s -X POST http://localhost:8000/api/v1/reviews/seed
+
+openapi-sync: ## Generate OpenAPI specification and verify schemas
+	bash scripts/generate-api-client.sh
+
+# ── Terraform Infrastructure as Code (Google Cloud & Docker) ──────────
+tf-init: ## Initialize Terraform infrastructure
+	terraform -chdir=infrastructure/terraform init
+
+tf-plan: ## Plan Terraform infrastructure changes
+	terraform -chdir=infrastructure/terraform plan
+
+tf-apply: ## Apply Terraform infrastructure changes to GCP
+	terraform -chdir=infrastructure/terraform apply
+
 # ── Cleanup ──────────────────────────────────────────────────────────
 clean: ## Remove temporary files, caches, and build artifacts
 	@echo "Cleaning up caches and temporary files..."

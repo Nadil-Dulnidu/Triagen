@@ -212,7 +212,10 @@ async def trigger_repository_indexing(
     inst_id = int(org.github_installation_id) if org and org.github_installation_id else None
 
     if not inst_id:
-        raise HTTPException(status_code=400, detail="No GitHub App installation linked to organization")
+        raise HTTPException(
+            status_code=400,
+            detail="No GitHub App installation linked to organization",
+        )
 
     from server.workers.indexing_tasks import index_repository_codebase
     task = index_repository_codebase.delay(repository_id=repo.id, installation_id=inst_id)

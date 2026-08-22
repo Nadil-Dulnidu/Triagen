@@ -52,11 +52,11 @@ class Base(DeclarativeBase):
 def import_all_models() -> None:
     """Import all domain models to ensure SQLAlchemy's mapper registry is fully populated."""
     try:
-        import server.domains.analytics.models  # noqa: F401
-        import server.domains.auth.models  # noqa: F401
-        import server.domains.memory.models  # noqa: F401
-        import server.domains.repositories.models  # noqa: F401
-        import server.domains.reviews.models  # noqa: F401
+        import server.domains.analytics.models
+        import server.domains.auth.models
+        import server.domains.memory.models
+        import server.domains.repositories.models
+        import server.domains.reviews.models
         import server.domains.webhooks.models  # noqa: F401
     except ImportError:
         pass
