@@ -72,16 +72,23 @@ async def handle_github_webhook(
         event_id=webhook_event.id,
     )
 
-    # Enqueue background task based on event type
-    if event_type == "pull_request" and action in {"opened", "synchronize", "reopened"}:
-        try:
-            from server.workers.review_tasks import process_github_pr_review
+    # Enqueue background review task ONLY when a PR is newly opened or reopened
+    if event_type == "pull_request" and action in {"opened", "reopened"}:
+        pr_data = payload.get("pull_request", {})
+        pr_state = pr_data.get("state")
+        head_ref = pr_data.get("head", {}).get("ref")
+        base_ref = pr_data.get("base", {}).get("ref")
 
-            process_github_pr_review.delay(webhook_event.id)
-            logger.info("enqueued_pr_review_task", event_id=webhook_event.id)
-        except Exception as e:
-            logger.warning("celery_enqueue_failed", error=str(e))
-            # Even if Celery is offline during local test, webhook is saved in DB
+        # Only trigger for open PRs with distinct source/target branches
+        if pr_state == "open" and head_ref != base_ref:
+            try:
+                from server.workers.review_tasks import process_github_pr_review
+
+                process_github_pr_review.delay(webhook_event.id)
+                logger.info("enqueued_pr_review_task", event_id=webhook_event.id, action=action)
+            except Exception as e:
+                logger.warning("celery_enqueue_failed", error=str(e))
+                # Even if Celery is offline during local test, webhook is saved in DB
     elif event_type in {"installation", "installation_repositories"}:
         try:
             from server.workers.sync_tasks import sync_github_installation

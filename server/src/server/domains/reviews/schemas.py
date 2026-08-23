@@ -44,14 +44,29 @@ class ReviewAgentRunResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class RepositoryBriefResponse(BaseModel):
+    """Brief repository representation attached to pull requests."""
+
+    id: str
+    github_repo_id: int
+    full_name: str
+    name: str
+    default_branch: str = "main"
+    language: str | None = None
+
+    model_config = {"from_attributes": True}
+
+
 class PullRequestResponse(BaseModel):
     """Pull Request metadata."""
 
     id: str
     github_pr_id: int
     pr_number: int
+    number: int | None = None
     title: str
     author_github_username: str | None = None
+    author: str | None = None
     head_sha: str
     base_branch: str
     head_branch: str
@@ -60,6 +75,7 @@ class PullRequestResponse(BaseModel):
     deletions: int = 0
     changed_files: int = 0
     created_at: datetime
+    repository: RepositoryBriefResponse | None = None
 
     model_config = {"from_attributes": True}
 
@@ -71,6 +87,7 @@ class ReviewResponse(BaseModel):
     pull_request_id: str
     status: str
     triage_classification: str | None = None
+    risk_level: str | None = None
     triage_metadata: dict[str, Any] | None = None
     summary: str | None = None
     total_findings: int = 0
@@ -83,6 +100,7 @@ class ReviewResponse(BaseModel):
     started_at: datetime | None = None
     completed_at: datetime | None = None
     created_at: datetime
+    pull_request: PullRequestResponse | None = None
 
     model_config = {"from_attributes": True}
 
@@ -90,6 +108,5 @@ class ReviewResponse(BaseModel):
 class ReviewDetailResponse(ReviewResponse):
     """Detailed review response with findings, agent runs, and PR metadata."""
 
-    pull_request: PullRequestResponse | None = None
     findings: list[ReviewFindingResponse] = []
     agent_runs: list[ReviewAgentRunResponse] = []

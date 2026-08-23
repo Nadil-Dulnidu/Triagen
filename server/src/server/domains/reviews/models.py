@@ -45,11 +45,20 @@ class PullRequest(Base):
 
     # Relationships
     repository: Mapped[Repository] = relationship(  # noqa: F821
-        back_populates="pull_requests"
+        back_populates="pull_requests",
+        lazy="selectin",
     )
     reviews: Mapped[list[Review]] = relationship(
         back_populates="pull_request", cascade="all, delete-orphan"
     )
+
+    @property
+    def number(self) -> int:
+        return self.pr_number
+
+    @property
+    def author(self) -> str | None:
+        return self.author_github_username
 
 
 class Review(Base):
@@ -102,6 +111,10 @@ class Review(Base):
     agent_runs: Mapped[list[ReviewAgentRun]] = relationship(
         back_populates="review", cascade="all, delete-orphan", lazy="selectin"
     )
+
+    @property
+    def risk_level(self) -> str:
+        return self.triage_classification or "low"
 
 
 class ReviewFinding(Base):

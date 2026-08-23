@@ -85,8 +85,14 @@ export default function ReviewsPage() {
 
   const filteredReviews = reviews.filter((rev) => {
     const title = rev.pull_request?.title || "";
-    const repo = rev.pull_request?.repository?.full_name || "";
-    const author = rev.pull_request?.author || "";
+    const repo =
+      rev.pull_request?.repository?.full_name ||
+      rev.pull_request?.repository?.name ||
+      "";
+    const author =
+      rev.pull_request?.author ||
+      rev.pull_request?.author_github_username ||
+      "";
 
     const matchesSearch =
       title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -181,6 +187,23 @@ export default function ReviewsPage() {
           {filteredReviews.map((review) => {
             const isProcessing =
               review.status === "in_progress" || review.status === "pending";
+            const repoFullName =
+              review.pull_request?.repository?.full_name ||
+              review.pull_request?.repository?.name ||
+              "Repository";
+            const prNumber =
+              review.pull_request?.number ??
+              review.pull_request?.pr_number ??
+              1;
+            const prTitle = review.pull_request?.title
+              ? `${review.pull_request.title} Review`
+              : "Pull Request Review";
+            const author =
+              review.pull_request?.author ||
+              review.pull_request?.author_github_username ||
+              "Developer";
+            const riskLevel =
+              review.risk_level || review.triage_classification || "low";
 
             return (
               <Link
@@ -190,30 +213,28 @@ export default function ReviewsPage() {
               >
                 <div className="space-y-2">
                   <div className="flex items-center gap-2.5">
-                    <span className="text-xs font-mono text-muted-foreground">
-                      {review.pull_request?.repository?.full_name || "Repository"}
+                    <span className="text-xs font-mono font-medium text-foreground">
+                      {repoFullName}
                     </span>
                     <Badge variant="outline" className="text-xs font-mono font-normal">
-                      #{review.pull_request?.number || 1}
+                      #{prNumber}
                     </Badge>
                     <Badge
                       variant="secondary"
                       className="text-xs capitalize bg-accent/60"
                     >
-                      {review.risk_level} risk
+                      {riskLevel} risk
                     </Badge>
                   </div>
 
                   <h3 className="font-semibold text-foreground group-hover:text-violet-400 transition-colors text-sm">
-                    {review.pull_request?.title || "Pull Request Review"}
+                    {prTitle}
                   </h3>
 
                   <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground font-mono">
                     <span>
                       Author:{" "}
-                      <strong className="text-foreground">
-                        {review.pull_request?.author || "Developer"}
-                      </strong>
+                      <strong className="text-foreground">{author}</strong>
                     </span>
                     <span>•</span>
                     <span className="flex items-center gap-1">

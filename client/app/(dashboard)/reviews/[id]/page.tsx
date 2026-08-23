@@ -73,8 +73,17 @@ export default function ReviewDetailPage({
     };
   }, [reviewId, getToken]);
 
-  // Set up SSE listener for live review progress
+  // Set up SSE listener for live review progress only when review is active
   useEffect(() => {
+    if (!review) return;
+
+    // If review is in terminal state, ensure live status is off and do not connect SSE
+    if (review.status === "completed" || review.status === "failed") {
+      setIsLive(false);
+      return;
+    }
+
+    setIsLive(true);
     const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
     const sseUrl = `${apiBase}/api/v1/reviews/${reviewId}/stream`;
     let eventSource: EventSource | null = null;
@@ -108,18 +117,24 @@ export default function ReviewDetailPage({
         loadReview();
         eventSource?.close();
       });
+      eventSource.addEventListener("review.failed", () => {
+        setIsLive(false);
+        loadReview();
+        eventSource?.close();
+      });
       eventSource.onerror = () => {
         setIsLive(false);
         eventSource?.close();
       };
     } catch (err) {
       console.warn("SSE connection error:", err);
+      setIsLive(false);
     }
 
     return () => {
       eventSource?.close();
     };
-  }, [reviewId, loadReview]);
+  }, [reviewId, review?.status, loadReview]);
 
   const findings = review?.findings || [];
   const filteredFindings = findings.filter((f) => {
@@ -169,13 +184,15 @@ export default function ReviewDetailPage({
           </Link>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-mono text-muted-foreground">
-                {review.pull_request?.repository?.full_name || "Repository"}
+              <span className="text-xs font-mono font-medium text-muted-foreground">
+                {review.pull_request?.repository?.full_name ||
+                  review.pull_request?.repository?.name ||
+                  "Repository"}
               </span>
               <Badge variant="outline" className="text-xs font-mono">
-                #{review.pull_request?.number || 1}
+                #{review.pull_request?.number ?? review.pull_request?.pr_number ?? 1}
               </Badge>
-              {isLive && (
+              {isLive && review.status !== "completed" && review.status !== "failed" && (
                 <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/40 gap-1.5 animate-pulse">
                   <SparklesIcon className="h-3 w-3" />
                   Live SSE
@@ -183,7 +200,9 @@ export default function ReviewDetailPage({
               )}
             </div>
             <h1 className="text-xl font-bold tracking-tight mt-0.5">
-              {review.pull_request?.title || "Pull Request Review"}
+              {review.pull_request?.title
+                ? `${review.pull_request.title} Review`
+                : "Pull Request Review"}
             </h1>
           </div>
         </div>
@@ -202,7 +221,7 @@ export default function ReviewDetailPage({
       </div>
 
       {/* Live Progress Banner (if active) */}
-      {isLive && (
+      {isLive && review.status !== "completed" && review.status !== "failed" && (
         <div className="rounded-xl border border-violet-500/30 bg-violet-950/20 p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <SparklesIcon className="h-5 w-5 text-violet-400 animate-spin" />
@@ -222,7 +241,7 @@ export default function ReviewDetailPage({
           <span className="text-xs text-muted-foreground">Classification</span>
           <div className="flex items-center gap-2">
             <Badge variant="secondary" className="capitalize text-xs font-medium">
-              {review.risk_level} risk
+              {review.risk_level || review.triage_classification || "low"} risk
             </Badge>
           </div>
         </div>
@@ -248,7 +267,11 @@ export default function ReviewDetailPage({
         <div className="rounded-xl border border-border/70 bg-card/60 p-4 space-y-1">
           <span className="text-xs text-muted-foreground">Author</span>
           <div className="flex items-center gap-2 text-xs font-medium text-foreground">
-            <span>{review.pull_request?.author || "Developer"}</span>
+            <span>
+              {review.pull_request?.author ||
+                review.pull_request?.author_github_username ||
+                "Developer"}
+            </span>
           </div>
         </div>
       </div>

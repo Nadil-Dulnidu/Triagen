@@ -8,6 +8,7 @@ from server.config import Settings
 def test_settings_defaults() -> None:
     """Test default settings instantiation and properties."""
     settings = Settings(
+        _env_file=None,
         clerk_secret_key="sk_test_123",
         clerk_webhook_secret="whsec_123",
         clerk_jwks_url="https://test.clerk.dev/.well-known/jwks.json",

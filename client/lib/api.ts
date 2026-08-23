@@ -23,21 +23,27 @@ export interface ReviewResponse {
   pull_request_id: string;
   status: "pending" | "in_progress" | "completed" | "failed";
   summary?: string | null;
-  risk_level: "low" | "medium" | "high" | "critical";
+  risk_level?: "low" | "medium" | "high" | "critical" | string;
+  triage_classification?: string | null;
   total_findings: number;
   critical_count: number;
   warning_count: number;
   suggestion_count: number;
   duration_ms?: number | null;
   created_at: string;
-  updated_at: string;
-  findings: ReviewFinding[];
+  updated_at?: string;
+  findings?: ReviewFinding[];
   pull_request?: {
     id: string;
-    number: number;
+    number?: number;
+    pr_number?: number;
     title: string;
-    author: string;
+    author?: string;
+    author_github_username?: string;
+    head_branch?: string;
+    base_branch?: string;
     repository?: {
+      id?: string;
       full_name: string;
       name: string;
     };

@@ -32,7 +32,7 @@ class ReviewRepository:
             select(Review)
             .where(Review.id == review_id)
             .options(
-                selectinload(Review.pull_request),
+                selectinload(Review.pull_request).selectinload(PullRequest.repository),
                 selectinload(Review.findings),
                 selectinload(Review.agent_runs),
             )
@@ -127,7 +127,8 @@ class ReviewRepository:
             .limit(limit)
             .offset(offset)
             .options(
-                selectinload(Review.pull_request),
+                selectinload(Review.pull_request).selectinload(PullRequest.repository),
+                selectinload(Review.findings),
             )
         )
         result = await self._session.execute(stmt)

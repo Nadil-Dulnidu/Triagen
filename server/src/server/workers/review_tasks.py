@@ -66,65 +66,53 @@ async def _execute_pr_review(webhook_event_id: str) -> dict[str, Any]:
 
         repo_github_id = repo_data.get("id")
         repo_full_name = repo_data.get("full_name", "")
-        repo_name = repo_data.get("name", "")
         pr_number = pr_data.get("number")
         github_pr_id = pr_data.get("id")
         installation_id = installation_data.get("id")
 
-        if not all([repo_github_id, pr_number, installation_id]):
-            logger.error(
-                "invalid_pr_webhook_payload",
-                repo_id=repo_github_id,
+        # Verify PR state and distinct branches
+        head_branch = pr_data.get("head", {}).get("ref", "")
+        base_branch = pr_data.get("base", {}).get("ref", "main")
+        pr_state = pr_data.get("state", "open")
+
+        if pr_state != "open" or head_branch == base_branch:
+            logger.info(
+                "skipping_invalid_pr_review",
+                repo=repo_full_name,
                 pr_number=pr_number,
-                installation_id=installation_id,
+                state=pr_state,
+                head=head_branch,
+                base=base_branch,
             )
-            return {"status": "error", "message": "Missing required PR payload fields"}
+            webhook_event.processing_status = "skipped"
+            await session.commit()
+            return {"status": "skipped", "message": "PR is closed or matches base branch"}
 
         repo_repo = RepositoryEntityRepository(session)
         pr_repo = PullRequestRepository(session)
         review_repo = ReviewRepository(session)
 
-        # 2. Upsert Repository & PullRequest
+        # 2. Check Repository connection
         repo_entity = await repo_repo.get_by_github_id(repo_github_id)
-        if repo_entity is None:
-            from server.domains.auth.models import Organization
+        if repo_entity is None or not repo_entity.is_active:
+            logger.info("skipping_unconnected_repository_review", repo=repo_full_name)
+            webhook_event.processing_status = "skipped"
+            await session.commit()
+            return {
+                "status": "skipped",
+                "message": f"Repository {repo_full_name} is not connected in Triagen",
+            }
 
-            org = None
-            if installation_id:
-                stmt_org = select(Organization).where(
-                    Organization.github_installation_id == str(installation_id)
-                )
-                res = await session.execute(stmt_org)
-                org = res.scalar_one_or_none()
+        # Check per-repository auto-review toggle
+        from server.domains.repositories.repository import RepositoryManagerRepository
 
-            if not org and webhook_event.organization_id:
-                org = await session.get(Organization, webhook_event.organization_id)
-
-            if not org:
-                res = await session.execute(select(Organization).limit(1))
-                org = res.scalar_one_or_none()
-
-            if not org:
-                org = Organization(
-                    clerk_org_id=f"org_inst_{installation_id or 'default'}",
-                    name="Default Organization",
-                    github_installation_id=str(installation_id) if installation_id else None,
-                )
-                session.add(org)
-                await session.flush()
-            elif installation_id and not org.github_installation_id:
-                org.github_installation_id = str(installation_id)
-                await session.flush()
-
-            org_id = org.id
-            repo_entity = await repo_repo.create_or_update(
-                organization_id=org_id,
-                github_repo_id=repo_github_id,
-                full_name=repo_full_name,
-                name=repo_name,
-                default_branch=repo_data.get("default_branch", "main"),
-                language=repo_data.get("language"),
-            )
+        repo_mgr = RepositoryManagerRepository(session)
+        repo_config = await repo_mgr.get_or_create_config(repo_entity.id)
+        if not repo_config.auto_review_enabled:
+            logger.info("auto_review_disabled_for_repo", repo=repo_full_name)
+            webhook_event.processing_status = "skipped"
+            await session.commit()
+            return {"status": "skipped", "message": "Auto review disabled for repository"}
 
         pr_entity = await pr_repo.create_or_update(
             repository_id=repo_entity.id,
